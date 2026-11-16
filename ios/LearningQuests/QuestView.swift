@@ -52,7 +52,7 @@ final class QuestController: NSObject, ObservableObject, WKNavigationDelegate {
     // MARK: pages
 
     private func pageURL(_ page: String) -> URL {
-        URL(string: page, relativeTo: Config.siteURL)!.absoluteURL
+        page.isEmpty ? Config.siteURL : URL(string: page, relativeTo: Config.siteURL)!.absoluteURL
     }
 
     private func fileName(_ page: String) -> String {
@@ -127,6 +127,9 @@ final class QuestController: NSObject, ObservableObject, WKNavigationDelegate {
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction,
                  decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
         guard let url = action.request.url else { decisionHandler(.cancel); return }
+        #if DEBUG
+        print("[nav]", action.navigationType.rawValue, url.absoluteString)
+        #endif
         if url.scheme == "about" { decisionHandler(.allow); return }
 
         let withoutFragment = url.absoluteString.components(separatedBy: "#")[0]
@@ -143,7 +146,7 @@ final class QuestController: NSObject, ObservableObject, WKNavigationDelegate {
             if page.hasSuffix("index.html") { page = String(page.dropLast("index.html".count)) }
             if !page.isEmpty, !page.hasSuffix("/") { page += "/" }
             decisionHandler(.cancel)
-            show(page)
+            DispatchQueue.main.async { self.show(page) }   // start the new load after this one is cancelled
             return
         }
         decisionHandler(.cancel)   // any other website: stay in the app
