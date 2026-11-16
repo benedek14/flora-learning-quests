@@ -894,6 +894,8 @@ function fillVoices(){
   $('#voiceGroup').hidden=!canSpeak||!vs.length;
   const cur=bestVoice();
   $('#voiceNote').hidden=vs.some(v=>rankOf(v)<=4);
+  const ios=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  if(ios)$('#voiceNote').textContent='For a much more natural voice: Settings → Accessibility → Read & Speak (Spoken Content) → Voices → English → download an “Enhanced” or “Premium” voice (for example Serena or Jamie, UK). Then reopen this game.';
   const good=v=>rankOf(v)<=4;
   sel.innerHTML=sortedVoices().map(v=>`<option value="${v.name.replace(/"/g,'&quot;')}"${cur&&v.name===cur.name?' selected':''}>${good(v)?'★ ':''}${v.name.replace(/\s*\(.*\)$/,'')} · ${v.lang}</option>`).join('');
 }
