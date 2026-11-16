@@ -1,0 +1,944 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1d19">
+<style>
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+img{max-width:100%}
+html{-webkit-text-size-adjust:100%}
+</style>
+<title>Flora's Fraction Quest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@500;700;800;900&display=swap">
+<style>
+/* Layout: one centred column. Home = world picker + topics + level, then the collection shelf.
+   Quest = a single question card as the stage. Deliberately one night-forest look (dark), accent shifts per world. */
+:root{
+  --bg:#0f1d19;
+  --bg2:#183229;
+  --panel:#1a2f29;
+  --panel2:#223d34;
+  --line:#2f4c41;
+  --ink:#f4efe1;
+  --muted:#a7b9ad;
+  --accent:#ffb547;
+  --accent-ink:#1b1206;
+  --good:#86e394;
+  --bad:#ff8b7b;
+  --f-display:'Lilita One','Arial Rounded MT Bold','Trebuchet MS',system-ui,sans-serif;
+  --f-body:'Nunito',ui-rounded,'Segoe UI',system-ui,sans-serif;
+  color-scheme:dark;
+}
+body[data-world="wizard"]{--accent:#e9c45b}
+body[data-world="minecraft"]{--accent:#78d353}
+body[data-world="pokemon"]{--accent:#ff6a5c}
+body[data-world="forest"]{--accent:#ff9447}
+body[data-world="dragon"]{--accent:#5cc8d6}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{min-height:100%}
+body{
+  background-color:var(--bg);
+  background-image:radial-gradient(1100px 520px at 50% -8%, var(--bg2), transparent 70%);
+  background-attachment:fixed;
+  color:var(--ink);
+  font-family:var(--f-body);
+  font-size:17px;
+  line-height:1.5;
+  transition:background-color .4s;
+}
+.sky{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.sky i{position:absolute;width:5px;height:5px;border-radius:50%;background:var(--accent);opacity:.0;
+  box-shadow:0 0 10px 3px color-mix(in srgb,var(--accent) 60%,transparent);animation:glow 7s ease-in-out infinite}
+@keyframes glow{0%,100%{opacity:0;transform:translate(0,0)}40%{opacity:.75}60%{opacity:.55;transform:translate(14px,-18px)}}
+@media (prefers-reduced-motion:reduce){.sky i{animation:none;opacity:.35}*{transition:none!important}}
+
+.wrap{position:relative;z-index:1;max-width:800px;margin:0 auto;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:14px 56px}
+
+/* header */
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-block:6px 18px}
+.brand-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+a.ghost{text-decoration:none;display:inline-block;font-size:15px;padding:6px 12px}
+.brand{font-family:var(--f-display);font-size:20px;letter-spacing:.02em;color:var(--ink)}
+.brand b{color:var(--accent);font-weight:400}
+.stats{display:flex;gap:8px;flex-wrap:wrap}
+button.pill{color:var(--ink)}
+button.pill[aria-pressed="false"]{color:var(--muted)}
+.voice-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+#voiceSel{font:inherit;font-weight:700;color:var(--ink);background:var(--panel);border:2px solid var(--line);border-radius:12px;padding:9px 12px;max-width:100%;min-width:0}
+.voice-note{margin:0;font-size:14px;color:var(--muted);max-width:60ch}
+.actions .left{display:flex;gap:8px;flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;background:var(--panel);border:1px solid var(--line);
+  font-weight:800;font-size:15px;font-variant-numeric:tabular-nums}
+
+/* type */
+h1{font-family:var(--f-display);font-weight:400;font-size:clamp(36px,8vw,60px);line-height:1;margin:0;text-wrap:balance;letter-spacing:.01em}
+h1 em{font-style:normal;color:var(--accent)}
+h2{font-family:var(--f-display);font-weight:400;font-size:24px;margin:0;text-wrap:balance}
+.lead{color:var(--muted);max-width:56ch;margin:0;font-size:17px}
+.label{font-size:12px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0}
+
+section.view{display:flex;flex-direction:column;gap:26px}
+.group{display:flex;flex-direction:column;gap:12px}
+.hero{display:flex;flex-direction:column;gap:12px;padding-block:4px 2px}
+
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+/* worlds */
+.worlds{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.world{--wa:var(--accent);display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;padding:14px 14px 13px;border-radius:16px;
+  background:var(--panel);border:2px solid var(--line);transition:transform .15s,border-color .15s,background .15s;min-width:0}
+.world:hover{transform:translateY(-2px)}
+.world[aria-pressed="true"]{border-color:var(--wa);background:var(--panel2);box-shadow:0 0 0 4px color-mix(in srgb,var(--wa) 22%,transparent)}
+.we{font-size:32px;line-height:1.1}
+.wn{font-family:var(--f-display);font-size:19px;line-height:1.1;color:var(--ink)}
+.world[aria-pressed="true"] .wn{color:var(--wa)}
+.wd{font-size:13px;color:var(--muted);line-height:1.3}
+@media (max-width:640px){
+  .worlds{grid-template-columns:1fr 1fr}
+}
+
+/* chips + levels */
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:8px 14px;border-radius:999px;border:2px solid var(--line);background:var(--panel);font-weight:800;font-size:15px}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.levels{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.lvl{padding:12px 14px;border-radius:14px;border:2px solid var(--line);background:var(--panel);text-align:left;display:flex;flex-direction:column;gap:2px;min-width:0}
+.lvl strong{font-family:var(--f-display);font-weight:400;font-size:19px}
+.lvl span{font-size:13px;color:var(--muted);line-height:1.3}
+.lvl[aria-pressed="true"]{border-color:var(--accent);background:var(--panel2)}
+.lvl[aria-pressed="true"] strong{color:var(--accent)}
+@media (max-width:520px){.levels{grid-template-columns:1fr}}
+
+.primary{font-family:var(--f-display);font-size:22px;letter-spacing:.02em;padding:14px 30px;border:none;border-radius:14px;
+  background:var(--accent);color:var(--accent-ink);box-shadow:0 5px 0 color-mix(in srgb,var(--accent) 55%,#000);transition:transform .08s,box-shadow .08s}
+.primary:active{transform:translateY(4px);box-shadow:0 1px 0 color-mix(in srgb,var(--accent) 55%,#000)}
+.primary:disabled{opacity:.45;cursor:not-allowed}
+.ghost{background:transparent;border:2px solid var(--line);border-radius:12px;padding:9px 16px;font-weight:800;color:var(--muted)}
+.ghost:hover{color:var(--ink);border-color:var(--muted)}
+.start-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.start-row p{margin:0;color:var(--muted);font-size:15px}
+
+/* shelf */
+.shelf{display:flex;flex-direction:column;gap:14px;padding:18px;border-radius:20px;background:var(--panel);border:1px solid var(--line)}
+.shelf-row{display:grid;grid-template-columns:120px 1fr;gap:12px;align-items:center}
+.shelf-row .sn{font-weight:800;font-size:15px}
+.slots{display:grid;grid-template-columns:repeat(10,1fr);gap:6px}
+.slot{aspect-ratio:1;max-width:100%;border-radius:10px;display:grid;place-items:center;font-size:clamp(16px,3.4vw,24px);background:var(--panel2)}
+.slot.locked{background:transparent;border:2px dashed var(--line);color:var(--line);font-weight:900;font-size:14px}
+@media (max-width:560px){.shelf-row{grid-template-columns:1fr;gap:6px}}
+
+.skills{display:flex;flex-direction:column;gap:10px}
+.skill{display:grid;grid-template-columns:minmax(0,190px) 1fr 74px;gap:12px;align-items:center;font-size:15px}
+.skill .track{height:10px;border-radius:6px;background:var(--panel2);overflow:hidden}
+.skill .track i{display:block;height:100%;background:var(--accent);border-radius:6px}
+.skill .val{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums;font-weight:700}
+.skill .val.warn{color:var(--bad)}
+@media (max-width:480px){.skill{grid-template-columns:1fr 64px}.skill .track{grid-column:1/-1;grid-row:2}}
+.foot{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:13px}
+
+/* quest */
+.qtop{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.dots{display:flex;gap:6px}
+.dot{width:14px;height:14px;border-radius:50%;background:var(--panel2);border:2px solid var(--line)}
+.dot.cur{border-color:var(--accent);background:transparent;transform:scale(1.2)}
+.dot.good{background:var(--good);border-color:var(--good)}
+.dot.ok{background:color-mix(in srgb,var(--good) 45%,var(--panel2));border-color:var(--good)}
+.dot.bad{background:var(--bad);border-color:var(--bad)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:24px;padding:24px clamp(18px,4vw,32px) 26px;display:flex;flex-direction:column;gap:20px}
+.tag{align-self:flex-start;display:inline-flex;gap:8px;align-items:center;padding:6px 12px;border-radius:999px;
+  background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent);font-weight:900;font-size:14px}
+.qtext{font-size:clamp(19px,3.2vw,23px);font-weight:700;line-height:1.85;margin:0;max-width:60ch}
+.display{font-size:clamp(34px,7vw,48px);text-align:center;font-weight:800;padding-block:4px}
+.display .eq{margin:0 .25em;color:var(--muted)}
+.display .calc-label{display:block;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:900;margin-bottom:6px}
+
+.fr{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;line-height:1.08;font-weight:800;margin:0 .12em;font-variant-numeric:tabular-nums}
+.fr>span:first-child{border-bottom:.08em solid currentColor;padding:0 .22em .04em}
+.fr>span:last-child{padding:.04em .22em 0}
+.mx{display:inline-flex;align-items:center;gap:.05em;font-weight:800;vertical-align:middle}
+
+.answer{display:flex;justify-content:center}
+.fin{display:flex;align-items:center;gap:12px}
+.stack{display:flex;flex-direction:column;align-items:center;gap:8px}
+.stack .line{height:5px;width:92px;border-radius:3px;background:var(--ink)}
+.inp{background:var(--bg);border:2px solid var(--line);border-radius:12px;color:var(--ink);font:inherit;font-weight:900;text-align:center;
+  font-size:28px;width:84px;height:56px;font-variant-numeric:tabular-nums}
+.inp:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 25%,transparent)}
+.inp.whole{width:72px;height:72px;font-size:34px}
+.inp.wide{width:160px}
+.inp:disabled{opacity:.7}
+.fin-hint{font-size:13px;color:var(--muted);text-align:center;margin:8px 0 0}
+.nin{display:flex;align-items:center;gap:10px;font-size:28px;font-weight:900}
+.choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;width:100%}
+.choice{padding:16px 12px;border-radius:14px;border:2px solid var(--line);background:var(--panel2);font-weight:800;font-size:20px;min-height:64px}
+.choice .fr{font-size:26px}
+.choice:hover:not(:disabled){border-color:var(--accent)}
+.choice.wrong{border-color:var(--bad);opacity:.55;text-decoration:line-through}
+.choice.right{border-color:var(--good);background:color-mix(in srgb,var(--good) 18%,var(--panel2))}
+
+.actions{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.hint{background:var(--panel2);border-radius:16px;padding:14px 18px;font-size:16px;line-height:1.8}
+.hint p{margin:0}
+.hint .calc{margin-top:6px;font-size:22px}
+.bars{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.barrow{display:flex;align-items:center;gap:12px}
+.fbar{display:flex;gap:3px;flex:1;max-width:420px}
+.fbar i{flex:1;height:22px;border-radius:4px;background:var(--bg);border:1px solid var(--line)}
+.fbar i.on{background:var(--accent);border-color:var(--accent)}
+.feedback{border-radius:16px;padding:14px 18px;line-height:1.8;font-size:16px}
+.feedback p{margin:0}
+.feedback.good{background:color-mix(in srgb,var(--good) 14%,transparent);border:1px solid color-mix(in srgb,var(--good) 40%,transparent)}
+.feedback.bad{background:color-mix(in srgb,var(--bad) 12%,transparent);border:1px solid color-mix(in srgb,var(--bad) 40%,transparent)}
+.feedback.try{background:color-mix(in srgb,var(--accent) 12%,transparent);border:1px solid color-mix(in srgb,var(--accent) 35%,transparent)}
+.feedback.info{background:var(--panel2)}
+.fb-title{font-weight:900;font-size:18px}
+.pts{display:inline-block;margin-left:6px;padding:0 10px;border-radius:999px;background:var(--good);color:#10240f;font-size:14px}
+details{margin-top:6px}
+summary{cursor:pointer;font-weight:800;color:var(--muted)}
+
+/* end */
+.end{align-items:center;text-align:center}
+.stars{font-size:64px;letter-spacing:.08em;line-height:1}
+.stars .off{color:var(--line)}
+.stars .on{color:var(--accent)}
+.score{font-family:var(--f-display);font-size:clamp(30px,6vw,44px);margin:0}
+.newitems{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+.newitem{display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 16px;border-radius:16px;background:var(--panel);border:1px solid var(--line);min-width:110px}
+.newitem b{font-size:40px;line-height:1.1}
+.newitem span{font-size:14px;font-weight:800}
+.row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+
+/* toast */
+.toast{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:color-mix(in srgb,var(--bg) 70%,transparent);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.toast-card{background:var(--panel);border:2px solid var(--accent);border-radius:24px;padding:26px 34px;text-align:center;display:flex;flex-direction:column;gap:6px;align-items:center;
+  animation:pop .45s cubic-bezier(.2,1.6,.4,1)}
+.toast-card b{font-size:76px;line-height:1.1}
+.toast-card strong{font-family:var(--f-display);font-weight:400;font-size:26px;color:var(--accent)}
+@keyframes pop{from{transform:scale(.5);opacity:0}to{transform:scale(1);opacity:1}}
+</style>
+
+</head>
+<body>
+<div class="sky" id="sky" aria-hidden="true"></div>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand-row"><a class="ghost hub" id="hubLink" href="../" hidden>← All quests</a><div class="brand">Fraction <b>Quest</b></div></div>
+    <div class="stats">
+      <button class="pill" id="sndBtn" aria-pressed="true" title="Read questions aloud">🔊 On</button>
+      <span class="pill" title="Stars earned"><span aria-hidden="true">⭐</span><span id="hXp">0</span></span>
+      <span class="pill" title="Correct answers in a row"><span aria-hidden="true">🔥</span><span id="hStreak">0</span></span>
+      <span class="pill" title="Collection"><span aria-hidden="true">🎒</span><span id="hBag">0/50</span></span>
+    </div>
+  </header>
+
+  <!-- HOME -->
+  <section class="view" id="home">
+    <div class="hero">
+      <h1>Flora’s <em>Fraction</em> Quest</h1>
+      <p class="lead">Pick a world, choose your topics and start a 10-question quest. Every 5 correct answers unlocks a new collectible for your bag.</p>
+    </div>
+
+    <div class="group">
+      <p class="label">Choose your world</p>
+      <div class="worlds" id="worlds"></div>
+    </div>
+
+    <div class="group">
+      <p class="label">Topics</p>
+      <div class="chips" id="topics"></div>
+    </div>
+
+    <div class="group">
+      <p class="label">Level</p>
+      <div class="levels" id="levels"></div>
+    </div>
+
+    <div class="group" id="voiceGroup" hidden>
+      <p class="label">Reading voice</p>
+      <div class="voice-row"><select id="voiceSel" aria-label="Reading voice"></select><button class="ghost" id="voiceTry">▶ Try it</button></div>
+      <p class="voice-note" id="voiceNote" hidden>This browser only has basic voices. ★ voices sound much more natural: Chrome has the Google voices, Microsoft Edge has very lifelike “Natural” voices.</p>
+    </div>
+
+    <div class="start-row">
+      <button class="primary" id="startBtn">Start quest</button>
+      <p id="startNote">10 questions · 10 stars for a first-try answer</p>
+    </div>
+
+    <div class="group">
+      <p class="label">Your collection</p>
+      <div class="shelf" id="shelf"></div>
+    </div>
+
+    <div class="group">
+      <p class="label">Your skills (first-try answers)</p>
+      <div class="shelf skills" id="skills"></div>
+    </div>
+
+    <div class="foot">
+      <span>Year 6 fractions: equivalence, comparing, the four operations, mixed numbers, decimals and percentages.</span>
+      <button class="ghost" id="resetBtn">Reset progress</button>
+    </div>
+  </section>
+
+  <!-- QUEST -->
+  <section class="view" id="quest" hidden>
+    <div class="qtop">
+      <button class="ghost" id="quitBtn">← Home</button>
+      <div class="dots" id="dots" aria-label="Progress"></div>
+    </div>
+    <article class="card">
+      <div class="tag" id="tag"></div>
+      <p class="qtext" id="qtext"></p>
+      <div class="display" id="display"></div>
+      <div class="answer" id="answer"></div>
+      <div class="hint" id="hint" hidden></div>
+      <div class="feedback" id="feedback" hidden></div>
+      <div class="actions">
+        <div class="left"><button class="ghost" id="readBtn">🔊 Read again</button><button class="ghost" id="hintBtn">💡 Hint</button></div>
+        <button class="primary" id="mainBtn">Check</button>
+      </div>
+    </article>
+  </section>
+
+  <!-- END -->
+  <section class="view end" id="end" hidden>
+    <div class="stars" id="eStars"></div>
+    <p class="score" id="eScore"></p>
+    <p class="lead" id="eLine"></p>
+    <div class="newitems" id="eItems"></div>
+    <div class="row">
+      <button class="primary" id="againBtn">Play again</button>
+      <button class="ghost" id="homeBtn">Home</button>
+    </div>
+  </section>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(()=>{
+/* ---------- helpers ---------- */
+const $=s=>document.querySelector(s);
+const rnd=Math.random;
+const ri=(a,b)=>a+Math.floor(rnd()*(b-a+1));
+const pick=a=>a[Math.floor(rnd()*a.length)];
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
+const gcd=(a,b)=>{a=Math.abs(a);b=Math.abs(b);while(b){[a,b]=[b,a%b];}return a;};
+const lcm=(a,b)=>a/gcd(a,b)*b;
+const simp=(n,d)=>{const g=gcd(n,d)||1;return [n/g,d/g];};
+const F=(n,d)=>`<span class="fr"><span>${n}</span><span>${d}</span></span>`;
+const M=(w,n,d)=>`<span class="mx">${w}${F(n,d)}</span>`;
+function nice(n,d){[n,d]=simp(n,d);if(d===1)return `${n}`;if(n>d)return M(Math.floor(n/d),n%d,d);return F(n,d);}
+function niceBoth(n,d){[n,d]=simp(n,d);if(d!==1&&n>d)return `${F(n,d)} = ${M(Math.floor(n/d),n%d,d)}`;return nice(n,d);}
+function tail(n,d){const [sn,sd]=simp(n,d);let s='';if(sn!==n)s+=` = ${sd===1?sn:F(sn,sd)}`;if(sd!==1&&sn>sd)s+=` = ${M(Math.floor(sn/sd),sn%sd,sd)}`;return s;}
+function properFrac(d){let n;do{n=ri(1,d-1);}while(gcd(n,d)!==1);return [n,d];}
+function dens(L){return L===1?[2,3,4,5,6,8,10]:L===2?[2,3,4,5,6,7,8,9,10,12]:[3,4,5,6,7,8,9,10,12,15];}
+function bars(list){return `<div class="bars">${list.map(([n,d])=>`<div class="barrow"><div class="fbar">${Array.from({length:d},(_,i)=>`<i class="${i<n?'on':''}"></i>`).join('')}</div>${F(n,d)}</div>`).join('')}</div>`;}
+const fmtNum=x=>String(Number(x.toFixed(4)));
+
+/* ---------- worlds ---------- */
+const W={
+  wizard:{id:'wizard',name:'Hogwarts',emoji:'🪄',accent:'#e9c45b',desc:'Spells, potions and owls',
+    chars:['Harry','Hermione','Ron','Luna','Neville','Ginny','Hagrid'],
+    items:['Chocolate Frogs','Every Flavour Beans','potion bottles','owl letters','spell books'],
+    pie:'a treacle tart',pieS:'tart',liquid:'pumpkin juice',cup:'goblet',path:'The path to Hagrid’s hut',place:'Hogsmeade',
+    field:'Herbology plant bed',quiz:'a Potions test',special:'enchanted',map:'the Forbidden Forest',
+    cheers:['Brilliant! 10 points to your house!','Spellbinding!','Outstanding wand work!','Even Hermione would be impressed!','Wingardium Leviosa! That answer flew!'],
+    collect:[['🦉','Snowy owl'],['🪄','Wand'],['🧹','Broomstick'],['🧪','Potion'],['🐸','Chocolate Frog'],['📜','Secret map'],['🔮','Crystal ball'],['🎩','Sorting Hat'],['🏆','House Cup'],['🐉','Dragon egg']],
+    special2:N=>[`There are ${N.N} students in the Great Hall. ${N.f} of them are in Ravenclaw. How many Ravenclaw students are there?`,
+                 `Hermione’s spell book has ${N.N} pages. She has read ${N.f} of it. How many pages has she read?`,
+                 `Hagrid baked ${N.N} rock cakes. ${N.f} of them were too hard to eat! How many rock cakes were too hard?`]},
+  minecraft:{id:'minecraft',name:'Minecraft',emoji:'⛏️',accent:'#78d353',desc:'Blocks, mines and creepers',
+    chars:['Steve','Alex','Zuri','Kai','Noor','Efe'],
+    items:['diamonds','emeralds','torches','cobblestone blocks','golden apples','arrows'],
+    pie:'a cake',pieS:'cake',liquid:'milk',cup:'bucket',path:'The tunnel to the stronghold',place:'the village',
+    field:'wheat farm',quiz:'a redstone quiz',special:'enchanted',map:'the Nether',
+    cheers:['Achievement unlocked!','You struck diamonds!','Epic crafting!','That answer is enchanted!','Creeper-proof! Great work!'],
+    collect:[['💎','Diamond'],['🟩','Emerald'],['⛏️','Pickaxe'],['🍎','Golden apple'],['🧱','Bricks'],['🔥','Blaze rod'],['🐷','Pig'],['🐺','Tamed wolf'],['📦','Chest'],['🗺️','Explorer map']],
+    special2:N=>[`A chest holds ${N.N} blocks. ${N.f} of them are cobblestone. How many cobblestone blocks are in the chest?`,
+                 `Alex mined ${N.N} ores today. ${N.f} of them were diamonds! How many diamonds did Alex find?`,
+                 `A village has ${N.N} villagers. ${N.f} of them are farmers. How many farmers are there?`]},
+  pokemon:{id:'pokemon',name:'Pokémon',emoji:'⚡',accent:'#ff6a5c',desc:'Trainers and their Pokémon',
+    chars:['Ash','Misty','Brock','Goh','Pikachu','Eevee'],
+    items:['Poké Balls','Oran Berries','Potions','trainer cards','badges'],
+    pie:'a giant berry pie',pieS:'pie',liquid:'berry juice',cup:'bottle',path:'The route to Cerulean City',place:'the Pokémon Center',
+    field:'berry patch',quiz:'a Pokémon trainer quiz',special:'shiny',map:'Viridian Forest',
+    cheers:['It’s super effective!','Critical hit!','Your fraction skills evolved!','Pikachu is cheering for you!','A wild correct answer appeared!'],
+    collect:[['⚡','Pikachu'],['🔥','Charmander'],['💧','Squirtle'],['🌱','Bulbasaur'],['🦊','Eevee'],['🌙','Umbreon'],['🍃','Leafeon'],['🐉','Dragonite'],['🦆','Psyduck'],['🔴','Master Ball']],
+    special2:N=>[`Ash’s team battled ${N.N} wild Pokémon. ${N.f} of them were Water types. How many were Water types?`,
+                 `Nurse Joy has ${N.N} Potions. She uses ${N.f} of them today. How many Potions does she use?`,
+                 `There are ${N.N} Pokémon in Viridian Forest. ${N.f} of them are Bug types. How many Bug types are there?`]},
+  forest:{id:'forest',name:'Fox Forest',emoji:'🦊',accent:'#ff9447',desc:'Foxes, owls and hedgehogs',
+    chars:['Fern the fox','Bramble the badger','Hazel the hedgehog','Oakley the owl','Pip the squirrel','Willow the deer'],
+    items:['acorns','hazelnuts','blackberries','pine cones','mushrooms'],
+    pie:'a blackberry pie',pieS:'pie',liquid:'elderflower juice',cup:'cup',path:'The trail to the old oak',place:'the mossy glade',
+    field:'clover patch',quiz:'the Forest School quiz',special:'golden',map:'Bluebell Wood',
+    cheers:['Clever as a fox!','The owls hoot with joy!','Hedgehog-high-five!','The whole forest is cheering!','Sharp as a fox’s ears!'],
+    collect:[['🦊','Fox'],['🦔','Hedgehog'],['🦡','Badger'],['🦉','Owl'],['🐿️','Squirrel'],['🦌','Deer'],['🐇','Rabbit'],['🐸','Frog'],['🍄','Mushroom'],['🦋','Butterfly']],
+    special2:N=>[`Pip the squirrel buried ${N.N} acorns in autumn. In winter Pip found ${N.f} of them again. How many acorns did Pip find?`,
+                 `There are ${N.N} trees in Bluebell Wood. ${N.f} of them are oak trees. How many oak trees are there?`,
+                 `A family of foxes saw ${N.N} rabbits this week. ${N.f} of them were baby rabbits. How many baby rabbits did they see?`]}
+};
+W.dragon={id:'dragon',name:'Dragons',emoji:'🐉',accent:'#5cc8d6',desc:'Vikings, Berk and Toothless',
+    chars:['Hiccup','Astrid','Fishlegs','Snotlout','Toothless','Stormfly'],
+    items:['fish','dragon scales','sheep','shields','Viking helmets'],
+    pie:'a Viking honey cake',pieS:'cake',liquid:'yak milk',cup:'mug',path:'The flight path to Dragon’s Edge',place:'Berk',
+    field:'sheep pen',quiz:'a Book of Dragons quiz',special:'fireproof',map:'the Hidden World',
+    cheers:['Toothless is doing a happy loop!','Dragon-sized brilliant!','That answer is hotter than dragon fire!','Hiccup would be proud!','Night Fury fast!'],
+    collect:[['🐉','Night Fury'],['🐲','Baby dragon'],['🥚','Dragon egg'],['🔥','Dragon fire'],['🛡️','Viking shield'],['⛵','Viking ship'],['🐟','Fish snack'],['🐑','Berk sheep'],['🪓','Viking axe'],['📖','Book of Dragons']],
+    special2:N=>[`Hiccup caught ${N.N} fish for Toothless. Toothless ate ${N.f} of them in one gulp! How many fish did Toothless eat?`,
+                 `There are ${N.N} dragons living on Berk. ${N.f} of them are Gronckles. How many Gronckles are there?`,
+                 `In the dragon race, Astrid and Stormfly collected ${N.N} sheep. ${N.f} of them were black sheep. How many black sheep did they collect?`]};
+const WORLD_IDS=Object.keys(W);
+const TOTAL_ITEMS=WORLD_IDS.reduce((a,id)=>a+W[id].collect.length,0);
+const MIX={id:'mix',name:'Mix them all',emoji:'🎲',accent:'#ffb547',desc:'A different world every question'};
+
+const TOPICS=[
+  {id:'equiv',name:'Equivalent & simplify',gens:['equivalent','simplify']},
+  {id:'compare',name:'Compare & order',gens:['compare','largest']},
+  {id:'addsub',name:'Add & subtract',gens:['add','sub']},
+  {id:'muldiv',name:'Multiply & divide',gens:['mul','div']},
+  {id:'amount',name:'Fraction of an amount',gens:['fracOf']},
+  {id:'mixed',name:'Mixed numbers',gens:['toMixed','toImproper']},
+  {id:'decimal',name:'Decimals & percentages',gens:['decimal']}
+];
+const TOPIC=Object.fromEntries(TOPICS.map(t=>[t.id,t]));
+const LEVELS=[
+  {n:1,name:'Apprentice',desc:'Smaller numbers, friendly denominators'},
+  {n:2,name:'Explorer',desc:'Different denominators, answers above 1'},
+  {n:3,name:'Master',desc:'Mixed numbers and tricky two-step questions'}
+];
+
+const ctx=w=>{const [c1,c2]=shuffle(w.chars);return {c1,c2,item:pick(w.items)};};
+
+/* ---------- question generators ---------- */
+const G={};
+
+G.equivalent=(L,w)=>{
+  const {c1,item}=ctx(w);
+  const [a,b]=properFrac(pick(dens(L)));
+  const k=ri(2,[5,8,12][L-1]);
+  const top=rnd()<.5;
+  return {
+    text:pick([
+      `${c1} is sorting ${item} into equal groups and writes two equivalent fractions. Find the missing number.`,
+      `${c1} says these two fractions are equal. What number is hiding behind the question mark?`,
+      `Help ${c1} open the treasure chest at ${w.place}! The secret code is the missing number.`]),
+    display:`${F(a,b)}<span class="eq">=</span>${top?F('?',b*k):F(a*k,'?')}`,
+    input:'number',answer:top?a*k:b*k,
+    hint:top?`What do you multiply ${b} by to get ${b*k}? Do the same to the top number.`:`What do you multiply ${a} by to get ${a*k}? Do the same to the bottom number.`,
+    viz:bars([[a,b]]),
+    explain:top?`${b} × ${k} = ${b*k}, so multiply the numerator by ${k} too: ${a} × ${k} = <b>${a*k}</b>.`
+               :`${a} × ${k} = ${a*k}, so multiply the denominator by ${k} too: ${b} × ${k} = <b>${b*k}</b>.`
+  };
+};
+
+G.simplify=(L,w)=>{
+  const {c1,c2,item}=ctx(w);
+  const [a,b]=properFrac(pick(dens(L).filter(d=>d>2)));
+  const k=ri(2,[5,8,12][L-1]);const n=a*k,d=b*k;
+  return {
+    text:pick([
+      `Out of ${d} ${item}, ${n} belong to ${c1}. What fraction of the ${item} belong to ${c1}? Write it in its simplest form.`,
+      `${c1} has finished ${n} out of ${d} jobs at ${w.place}. Write the fraction finished in its simplest form.`,
+      `${c2} wrote ${F(n,d)}. ${c1} says it can be simplified. Write it in its simplest form.`]),
+    display:`${F(n,d)}<span class="eq">=</span>?`,
+    input:'fraction',answer:{n:a,d:b},simplest:true,
+    hint:`Find a number that divides exactly into both ${n} and ${d}. Keep dividing until only 1 goes into both.`,
+    viz:d<=24?bars([[n,d]]):'',
+    explain:`The highest common factor of ${n} and ${d} is ${k}. ${n} ÷ ${k} = ${a} and ${d} ÷ ${k} = ${b}, so ${F(n,d)} = <b>${F(a,b)}</b>.`
+  };
+};
+
+G.compare=(L,w)=>{
+  const {c1,c2}=ctx(w);
+  const f1=properFrac(pick(dens(L)));let f2;
+  if(L>1&&rnd()<.15){const k=ri(2,3);f2=[f1[0]*k,f1[1]*k];}
+  else{do{f2=properFrac(pick(dens(L)));}while(f2[0]*f1[1]===f1[0]*f2[1]||(L>1&&f2[1]===f1[1]));}
+  const v=f1[0]*f2[1]-f2[0]*f1[1];const ans=v>0?0:v<0?1:2;
+  const [t,same]=pick([
+    [`${c1} drank ${F(...f1)} of a ${w.cup} of ${w.liquid}. ${c2} drank ${F(...f2)} of a ${w.cup} the same size. Who drank more?`,'They drank the same'],
+    [`${c1} has explored ${F(...f1)} of ${w.map}. ${c2} has explored ${F(...f2)} of it. Who has explored more?`,'They explored the same'],
+    [`${c1} ate ${F(...f1)} of ${w.pie}. ${c2} ate ${F(...f2)} of another ${w.pieS} the same size. Who ate more?`,'They ate the same']]);
+  const choices=[c1,c2,same];
+  const D=lcm(f1[1],f2[1]);
+  return {
+    text:t,input:'choice',choices,answer:ans,
+    hint:`Give both fractions the same denominator, then compare the numerators. Try ${D} as the denominator.`,
+    viz:f1[1]<=24&&f2[1]<=24?bars([f1,f2]):'',
+    explain:`With a common denominator of ${D}: ${F(...f1)} = ${F(f1[0]*D/f1[1],D)} and ${F(...f2)} = ${F(f2[0]*D/f2[1],D)}. `+
+      (ans===2?`They are equal, so the answer is <b>${same}</b>.`:`${F(Math.max(f1[0]*D/f1[1],f2[0]*D/f2[1]),D)} is bigger, so the answer is <b>${choices[ans]}</b>.`)
+  };
+};
+
+G.largest=(L,w)=>{
+  const {c1}=ctx(w);const big=rnd()<.6;
+  const fs=[];let guard=0;
+  while(fs.length<4&&guard++<300){const f=properFrac(pick(dens(L)));if(!fs.some(g=>g[0]*f[1]===f[0]*g[1]))fs.push(f);}
+  const vals=fs.map(f=>f[0]/f[1]);const target=big?Math.max(...vals):Math.min(...vals);const ans=vals.indexOf(target);
+  return {
+    text:pick([
+      `${c1} wants the ${big?'biggest':'smallest'} slice of ${w.pie}. Which slice should ${c1} choose?`,
+      `Four friends at ${w.place} filled their ${w.cup}s with ${w.liquid}. Which ${w.cup} is the ${big?'fullest':'least full'}?`,
+      `${c1} is checking four piles of ${pick(w.items)}. Which fraction is the ${big?'largest':'smallest'}?`]),
+    input:'choice',choices:fs.map(f=>F(...f)),answer:ans,
+    hint:`Turn each fraction into a decimal (top ÷ bottom), or compare each one with ${F(1,2)} first.`,
+    explain:`As decimals: ${fs.map(f=>`${F(...f)} ≈ ${(f[0]/f[1]).toFixed(3)}`).join(', ')}. The ${big?'largest':'smallest'} is <b>${F(...fs[ans])}</b>.`
+  };
+};
+
+function addsub(L,w,op){
+  const {c1,c2}=ctx(w);
+  let w1=0,w2=0,f1,f2;
+  if(L===1){
+    const d1=pick([2,3,4,5,6]);const ms=[2,3,4,5,6].filter(m=>d1*m<=12);
+    f1=properFrac(d1);f2=properFrac(d1*pick(ms));if(rnd()<.5)[f1,f2]=[f2,f1];
+  }else{
+    let d1,d2;do{d1=pick(dens(2));d2=pick(dens(2));}while(d1===d2||lcm(d1,d2)>60);
+    f1=properFrac(d1);f2=properFrac(d2);
+    if(L===3){w1=ri(1,4);w2=ri(0,3);}
+  }
+  let n1=w1*f1[1]+f1[0],n2=w2*f2[1]+f2[0];
+  if(op==='-'){
+    const c=n1*f2[1]-n2*f1[1];
+    if(c===0)return addsub(L,w,op);
+    if(c<0){[w1,w2]=[w2,w1];[f1,f2]=[f2,f1];[n1,n2]=[n2,n1];}
+  }
+  const D=lcm(f1[1],f2[1]);const a=n1*D/f1[1],b=n2*D/f2[1];const r=op==='+'?a+b:a-b;
+  const [sn,sd]=simp(r,D);
+  const A=w1?M(w1,f1[0],f1[1]):F(...f1),B=w2?M(w2,f2[0],f2[1]):F(...f2);
+  const sym=op==='+'?'+':'−';
+  const mixed=w1||w2;
+  let opts;
+  if(op==='+'){
+    opts=[`${c1} walked ${A} km to ${w.place}, then another ${B} km. How many km did ${c1} walk altogether?`,
+          `${c1} poured ${A} litres of ${w.liquid} into a jug, then added ${B} litres more. How many litres are in the jug now?`];
+    if(!mixed&&r<=D)opts.push(`${c1} ate ${A} of ${w.pie} and ${c2} ate ${B} of it. What fraction of the ${w.pieS} did they eat altogether?`);
+  }else{
+    opts=[`${w.path} is ${A} km long. ${c1} has walked ${B} km so far. How many km are left?`,
+          `${c1} had ${A} litres of ${w.liquid} and used ${B} litres in a recipe. How many litres are left?`];
+    if(!mixed)opts.push(`There was ${A} of ${w.pie} left. ${c1} ate ${B} of the whole ${w.pieS}. What fraction of the ${w.pieS} is left now?`);
+  }
+  let ex='';
+  if(mixed)ex+=`Change to improper fractions: ${A} = ${F(n1,f1[1])}${w2?` and ${B} = ${F(n2,f2[1])}`:''}.<br>`;
+  if(f1[1]!==D||f2[1]!==D)ex+=`Use a common denominator of ${D}: ${F(n1,f1[1])} = ${F(a,D)} and ${F(n2,f2[1])} = ${F(b,D)}.<br>`;
+  ex+=`${F(a,D)} ${sym} ${F(b,D)} = ${F(r,D)}`;
+  ex+=tail(r,D);
+  ex+='.';
+  return {
+    text:pick(opts),calc:`${A} ${sym} ${B}`,input:'fraction',answer:{n:sn,d:sd},whole:true,
+    hint:mixed?`Turn any mixed numbers into improper fractions first, then find a common denominator (${D} works).`
+              :`Find a common denominator first. ${D} works for ${f1[1]} and ${f2[1]}.`,
+    explain:ex
+  };
+}
+G.add=(L,w)=>addsub(L,w,'+');
+G.sub=(L,w)=>addsub(L,w,'-');
+
+G.mul=(L,w)=>{
+  const {c1,c2}=ctx(w);
+  if(L>1&&rnd()<.4){
+    const n=ri(2,L===2?6:9);const f=properFrac(pick(dens(L)));
+    const [sn,sd]=simp(n*f[0],f[1]);
+    let ex=`Multiply the numerator by ${n} and keep the denominator: ${n} × ${F(...f)} = ${F(n*f[0],f[1])}`;
+    ex+=tail(n*f[0],f[1]);
+    return {
+      text:pick([
+        `${c1} drinks ${F(...f)} of a litre of ${w.liquid} every day. How many litres does ${c1} drink in ${n} days?`,
+        `Each ${w.pieS} needs ${F(...f)} of a bag of flour. How many bags of flour does ${c1} need for ${n} ${w.pieS}s?`]),
+      calc:`${n} × ${F(...f)}`,input:'fraction',answer:{n:sn,d:sd},whole:true,
+      hint:`Multiplying a fraction by a whole number: multiply only the numerator, then simplify.`,
+      explain:ex+'.'
+    };
+  }
+  const dm=L===1?[2,3,4,5,6]:L===2?[2,3,4,5,6,8,10]:[3,4,5,6,7,8,9,10,12];
+  const f1=properFrac(pick(dm)),f2=properFrac(pick(dm));
+  const pn=f1[0]*f2[0],pd=f1[1]*f2[1];const [sn,sd]=simp(pn,pd);
+  const t=pick([
+    [`${c1} has ${F(...f1)} of ${w.pie} left and gives ${F(...f2)} of that piece to ${c2}. What fraction of the whole ${w.pieS} does ${c2} get?`,`${F(...f2)} × ${F(...f1)}`],
+    [`A ${w.field} is ${F(...f1)} m long and ${F(...f2)} m wide. What is its area in square metres?`,`${F(...f1)} × ${F(...f2)}`]]);
+  return {
+    text:t[0],calc:t[1],input:'fraction',answer:{n:sn,d:sd},
+    hint:`“Of” means multiply. Multiply the numerators together and the denominators together.`,
+    explain:`Multiply the numerators: ${f1[0]} × ${f2[0]} = ${pn}. Multiply the denominators: ${f1[1]} × ${f2[1]} = ${pd}. So the answer is ${F(pn,pd)}`+(sn!==pn?` = <b>${F(sn,sd)}</b>`:'')+'.'
+  };
+};
+
+G.div=(L,w)=>{
+  const {c1}=ctx(w);
+  const f=properFrac(pick(L===1?[2,3,4,5]:L===2?[2,3,4,5,6,8]:[3,4,5,6,7,8,9,10]));
+  const n=ri(2,[3,5,6][L-1]);
+  const [sn,sd]=simp(f[0],f[1]*n);
+  return {
+    text:pick([
+      `${F(...f)} of ${w.pie} is shared equally between ${n} friends. What fraction of the whole ${w.pieS} does each friend get?`,
+      `${c1} has ${F(...f)} of a litre of ${w.liquid} and pours it equally into ${n} bottles. How many litres go into each bottle?`,
+      `${c1} still has ${F(...f)} of ${w.map} to explore and splits it equally over ${n} days. What fraction of ${w.map} is explored each day?`]),
+    calc:`${F(...f)} ÷ ${n}`,input:'fraction',answer:{n:sn,d:sd},
+    hint:`Dividing by ${n} makes each part ${n} times smaller. Keep the numerator and multiply the denominator by ${n}.`,
+    explain:`Dividing by ${n} is the same as finding ${F(1,n)} of it: ${F(...f)} ÷ ${n} = ${F(f[0],f[1]*n)}`+(sn!==f[0]?` = <b>${F(sn,sd)}</b>`:'')+'.'
+  };
+};
+
+G.fracOf=(L,w)=>{
+  const {c1,c2,item}=ctx(w);
+  const b=pick(L===1?[2,3,4,5,6,8,10]:L===2?[3,4,5,6,7,8,9,10,12]:[5,6,7,8,9,12,15,20]);
+  const [a]=properFrac(b);
+  const m=ri(...[[2,8],[3,12],[4,20]][L-1]);const N=b*m,X=a*m,f=F(a,b);
+  if(L===3&&rnd()<.4){
+    return {
+      text:pick([
+        `${f} of ${c1}’s ${item} is ${X}. How many ${item} does ${c1} have altogether?`,
+        `${X} ${item} is ${f} of all the ${item} at ${w.place}. How many ${item} are there altogether?`]),
+      input:'number',answer:N,
+      hint:`If ${f} is ${X}, first find ${F(1,b)} by dividing ${X} by ${a}. Then multiply by ${b}.`,
+      viz:b<=20?bars([[a,b]]):'',
+      explain:`${F(1,b)} is ${X} ÷ ${a} = ${m}. The whole is ${b} lots of that: ${m} × ${b} = <b>${N}</b>.`
+    };
+  }
+  const shared=[`${c1} has ${N} ${item} and gives ${f} of them to ${c2}. How many ${item} does ${c2} get?`,
+                `${c1} needs ${N} ${item} and has collected ${f} of them so far. How many has ${c1} collected?`];
+  return {
+    text:pick([...shared,...w.special2({N,f})]),
+    calc:`${f} of ${N}`,input:'number',answer:X,
+    hint:`First find ${F(1,b)} of ${N} by dividing ${N} by ${b}. Then multiply by ${a}.`,
+    viz:b<=20?bars([[a,b]]):'',
+    explain:`${N} ÷ ${b} = ${m}, so ${F(1,b)} of ${N} is ${m}. `+(a>1?`Then ${m} × ${a} = <b>${X}</b>.`:`So the answer is <b>${X}</b>.`)
+  };
+};
+
+function mixedParts(L){const d=pick(dens(L));const wh=ri(1,[3,5,9][L-1]);const [r]=properFrac(d);return {d,wh,r,n:wh*d+r};}
+G.toMixed=(L,w)=>{
+  const {c1}=ctx(w);const {d,wh,r,n}=mixedParts(L);
+  return {
+    text:pick([
+      `${c1} cut some ${w.pieS}s into ${d} equal slices each. There are ${n} slices, which is ${F(n,d)} of a ${w.pieS}. Write ${F(n,d)} as a mixed number.`,
+      `${c1} poured ${F(n,d)} litres of ${w.liquid}. Write this improper fraction as a mixed number.`]),
+    display:`${F(n,d)}<span class="eq">=</span>?`,
+    input:'fraction',answer:{n,d},form:'mixed',whole:true,
+    hint:`How many times does ${d} go into ${n}? That is the whole number. The remainder goes on top.`,
+    explain:`${n} ÷ ${d} = ${wh} remainder ${r}, so ${F(n,d)} = <b>${M(wh,r,d)}</b>.`
+  };
+};
+G.toImproper=(L,w)=>{
+  const {c1}=ctx(w);const {d,wh,r,n}=mixedParts(L);
+  return {
+    text:pick([
+      `${c1} has ${wh} whole ${wh>1?w.pieS+'s':w.pieS} and ${F(r,d)} of another one. Write ${M(wh,r,d)} as an improper fraction.`,
+      `${w.path} is ${M(wh,r,d)} km long. Write this as an improper fraction.`]),
+    display:`${M(wh,r,d)}<span class="eq">=</span>?`,
+    input:'fraction',answer:{n,d},form:'improper',
+    hint:`Multiply the whole number by the denominator (${wh} × ${d}), then add the numerator.`,
+    explain:`${wh} × ${d} = ${wh*d}, and ${wh*d} + ${r} = ${n}. So ${M(wh,r,d)} = <b>${F(n,d)}</b>.`
+  };
+};
+
+G.decimal=(L,w)=>{
+  const {c1,item}=ctx(w);
+  const d=pick(L===1?[2,4,5,10]:L===2?[2,4,5,10,20,25,50]:[4,5,8,20,25,50,100]);
+  const [n]=properFrac(d);const pct=rnd()<.5;
+  const base=100%d===0?100:1000;const top=n*base/d;
+  const dec=fmtNum(n/d),per=fmtNum(n*100/d);
+  const f=F(n,d);
+  const story=pick([
+    `${c1} got ${f} of the questions right in ${w.quiz}.`,
+    `${f} of the ${item} in ${c1}’s bag are ${w.special}.`]);
+  return {
+    text:story+(pct?` What percentage is that?`:` Write ${f} as a decimal.`),
+    input:'number',answer:pct?n*100/d:n/d,unit:pct?'%':'',
+    hint:`Make an equivalent fraction with ${base} on the bottom.`+(pct?` Percent means “out of 100”.`:''),
+    explain:pct?`${f} = ${F(top,base)} = ${dec} = <b>${per}%</b>.`:`${f} = ${F(top,base)} = <b>${dec}</b>.`
+  };
+};
+
+/* ---------- read aloud ---------- */
+const ORD={2:['half','halves'],3:['third'],4:['quarter'],5:['fifth'],6:['sixth'],7:['seventh'],8:['eighth'],9:['ninth'],10:['tenth'],
+  11:['eleventh'],12:['twelfth'],13:['thirteenth'],14:['fourteenth'],15:['fifteenth'],16:['sixteenth'],17:['seventeenth'],18:['eighteenth'],
+  19:['nineteenth'],20:['twentieth'],25:['twenty-fifth'],30:['thirtieth'],40:['fortieth'],50:['fiftieth'],100:['hundredth']};
+function sayFrac(n,d){
+  if(n==='?'||d==='?'||!ORD[d])return `${n==='?'?'what':n} over ${d==='?'?'what':d}`;
+  const [one,many]=ORD[d];
+  return `${n} ${+n===1?one:(many||one+'s')}`;
+}
+function spokenText(el){
+  const c=el.cloneNode(true);
+  c.querySelectorAll('.mx').forEach(m=>{const fr=m.querySelector('.fr');const sp=fr.querySelectorAll('span');
+    m.replaceWith(`${m.firstChild.textContent.trim()} and ${sayFrac(sp[0].textContent,+sp[1].textContent||sp[1].textContent)}`);});
+  c.querySelectorAll('.fr').forEach(f=>{const sp=f.querySelectorAll('span');const d=sp[1].textContent;
+    f.replaceWith(` ${sayFrac(sp[0].textContent,d==='?'?'?':+d)} `);});
+  return c.textContent.replace(/×/g,' times ').replace(/÷/g,' divided by ').replace(/−/g,' minus ').replace(/=\s*\?/g,' equals what?')
+    .replace(/\?(?=\s|$)/g,'?').replace(/\bkm\b/g,'kilometres').replace(/ m\b/g,' metres').replace(/(\d)\s*%/g,'$1 percent').replace(/\s+/g,' ').trim();
+}
+const canSpeak='speechSynthesis' in window;
+// Best-sounding first. Apple's Eloquence voices (Flo, Eddy, Reed...) and novelty voices sound robotic, so they rank last / are hidden.
+const VOICE_RANK=[/(Sonia|Libby|Maisie|Ryan|Thomas|Ava|Emma|Jenny|Aria|Andrew|Brian).*(Natural|Online)/i,/Google UK English Female/i,/Google UK English Male/i,
+  /(Premium|Enhanced)/i,/Google US English/i,/^Daniel\b/,/^(Serena|Kate|Stephanie|Martha|Arthur|Oliver)\b/,/^Samantha\b/,/^Moira\b/,/^Karen\b/];
+const ROBOTIC=/^(Flo|Eddy|Reed|Rocko|Sandy|Shelley|Grandma|Grandpa)\b/;
+const NOVELTY=/^(Albert|Bad News|Bahh|Bells|Boing|Bubbles|Cellos|Wobble|Fred|Good News|Jester|Junior|Kathy|Organ|Superstar|Ralph|Trinoids|Whisper|Zarvox)\b/;
+function enVoices(){try{return speechSynthesis.getVoices().filter(v=>/^en[-_]/i.test(v.lang)&&!NOVELTY.test(v.name));}catch(e){return [];}}
+function rankOf(v){const i=VOICE_RANK.findIndex(re=>re.test(v.name));return i<0?(ROBOTIC.test(v.name)?99:50):i;}
+function sortedVoices(){return enVoices().sort((a,b)=>rankOf(a)-rankOf(b)||(/GB/i.test(b.lang)-/GB/i.test(a.lang)));}
+function bestVoice(){
+  const vs=sortedVoices();if(!vs.length)return null;
+  if(S.voice){const v=vs.find(v=>v.name===S.voice);if(v)return v;}
+  return vs[0];
+}
+/* parts: [{t, pitch, rate}] spoken one after another for a livelier rhythm */
+function speakParts(parts,force){
+  if(!canSpeak||(S.sound===false&&!force))return;
+  try{
+    speechSynthesis.cancel();
+    const v=bestVoice();
+    parts.forEach(p=>{
+      if(!p.t)return;
+      const u=new SpeechSynthesisUtterance(p.t);
+      if(v){u.voice=v;u.lang=v.lang;}else u.lang='en-GB';
+      u.rate=p.rate||1;u.pitch=p.pitch||1;u.volume=1;
+      speechSynthesis.speak(u);
+    });
+  }catch(e){}
+}
+function speak(text,force){speakParts([{t:text}],force);}
+const sentences=t=>(t.match(/[^.!?]+[.!?]+|[^.!?]+$/g)||[t]).map(x=>x.trim()).filter(Boolean);
+function stopSpeak(){if(canSpeak)try{speechSynthesis.cancel();}catch(e){}}
+const LUCK={
+  wizard:['Good luck, Flora! Grab your wand and cast your cleverest spell!','You can do it, Flora! Even Dumbledore would bet on you!','Good luck! May the magic of maths be with you, Flora!','Go for it, Flora! Ten points to your house are waiting!'],
+  minecraft:['Good luck, Flora! Grab your pickaxe and dig out that answer!','You’ve got this, Flora! Mine it, craft it, solve it!','Good luck! Watch out for creepers, Flora, and go find those diamonds!','Go on, Flora! Build that answer block by block!'],
+  pokemon:['Good luck, Flora! I choose you!','You can do it, Flora! Use your super effective brain power!','Go, Flora, go! Time to catch that answer!','Good luck, trainer Flora! Pikachu believes in you!'],
+  dragon:['Good luck, Flora! Climb on Toothless and fly to the answer!','You can do it, Flora! Brave as a Viking, clever as a Night Fury!','Good luck! Toothless is waiting for you, Flora. Let’s fly!','Go for it, Flora! Show those dragons what a real dragon trainer can do!'],
+  forest:['Good luck, Flora! Be as clever as a fox!','You can do it, Flora! The whole forest is cheering for you!','Good luck! Hedgehog high five, Flora, you’ve got this!','Off you go, Flora! Sniff out that answer like a clever little fox!']
+};
+const INTRO=['Ooh, question {n}!','Here comes question {n}!','Ready? Question {n}!','Question {n}, let’s go!','Ta-da! Question {n}!'];
+const LAST=['Last one! Question ten!','Final question! Make it count!'];
+function speakQ(force){
+  const q=R&&cur();if(!q)return;
+  const n=R.i+1;
+  const intro=n===10?pick(LAST):pick(INTRO).replace('{n}',n);
+  speakParts([{t:intro,pitch:1.08,rate:1.05},{t:spokenText($('#qtext')),pitch:1,rate:.98},{t:pick(LUCK[q.world]),pitch:1.1,rate:1.05}],force);
+}
+if(canSpeak)try{speechSynthesis.getVoices();speechSynthesis.onvoiceschanged=()=>{};}catch(e){}
+
+/* ---------- state ---------- */
+const STORE='flora-fraction-quest-v1';
+const ALL_TOPICS=TOPICS.map(t=>t.id);
+let saved=null;try{saved=JSON.parse(localStorage.getItem(STORE));}catch(e){}
+const S=Object.assign({xp:0,streak:0,best:0,charge:0,owned:{},stats:{},world:'mix',topics:ALL_TOPICS.slice(),level:1},saved||{});
+S.topics=S.topics.filter(t=>TOPIC[t]);if(!S.topics.length)S.topics=ALL_TOPICS.slice();
+if(!S.voiceV2){S.voice=null;S.voiceV2=1;}
+const save=()=>{try{localStorage.setItem(STORE,JSON.stringify(S));}catch(e){}};
+let R=null;
+
+/* ---------- views ---------- */
+const views=['home','quest','end'];
+function show(id){views.forEach(v=>$('#'+v).hidden=v!==id);window.scrollTo(0,0);}
+const ownedCount=()=>Object.keys(S.owned).length;
+function updateHeader(){
+  const sb=$('#sndBtn');sb.setAttribute('aria-pressed',S.sound!==false);sb.textContent=S.sound!==false?'🔊 On':'🔇 Off';sb.hidden=!canSpeak;$('#readBtn').hidden=!canSpeak;
+  $('#hXp').textContent=S.xp;$('#hStreak').textContent=S.streak;$('#hBag').textContent=`${ownedCount()}/${TOTAL_ITEMS}`;
+}
+function renderHome(){
+  document.body.dataset.world=S.world==='mix'?'':S.world;
+  $('#worlds').innerHTML=[...WORLD_IDS,'mix'].map(id=>{const w=id==='mix'?MIX:W[id];
+    return `<button class="world" data-id="${id}" aria-pressed="${S.world===id}" style="--wa:${w.accent}"><span class="we" aria-hidden="true">${w.emoji}</span><span class="wn">${w.name}</span><span class="wd">${w.desc}</span></button>`;}).join('');
+  $('#topics').innerHTML=`<button class="chip" data-t="all" aria-pressed="${S.topics.length===TOPICS.length}">All topics</button>`+
+    TOPICS.map(t=>`<button class="chip" data-t="${t.id}" aria-pressed="${S.topics.includes(t.id)&&S.topics.length!==TOPICS.length}">${t.name}</button>`).join('');
+  $('#levels').innerHTML=LEVELS.map(l=>`<button class="lvl" data-l="${l.n}" aria-pressed="${S.level===l.n}"><strong>${l.name}</strong><span>${l.desc}</span></button>`).join('');
+  $('#shelf').innerHTML=WORLD_IDS.map(id=>{const w=W[id];
+    return `<div class="shelf-row"><span class="sn">${w.emoji} ${w.name}</span><div class="slots">${w.collect.map((c,i)=>S.owned[id+':'+i]?`<span class="slot" title="${c[1]}">${c[0]}</span>`:`<span class="slot locked" title="Locked">?</span>`).join('')}</div></div>`;}).join('');
+  $('#skills').innerHTML=TOPICS.map(t=>{const s=S.stats[t.id];const pct=s&&s.t?Math.round(100*s.r/s.t):null;
+    const warn=pct!==null&&s.t>=5&&pct<60;
+    return `<div class="skill"><span>${t.name}</span><span class="track"><i style="width:${pct||0}%"></i></span><span class="val${warn?' warn':''}">${pct===null?'not yet':pct+'%'}${s&&s.t?` <small>(${s.t})</small>`:''}</span></div>`;}).join('');
+  updateHeader();
+}
+
+$('#worlds').addEventListener('click',e=>{const b=e.target.closest('.world');if(!b)return;S.world=b.dataset.id;save();renderHome();});
+$('#topics').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;const t=b.dataset.t;
+  if(t==='all')S.topics=ALL_TOPICS.slice();
+  else if(S.topics.length===TOPICS.length)S.topics=[t];
+  else if(S.topics.includes(t)){S.topics=S.topics.filter(x=>x!==t);if(!S.topics.length)S.topics=ALL_TOPICS.slice();}
+  else S.topics.push(t);
+  save();renderHome();});
+$('#levels').addEventListener('click',e=>{const b=e.target.closest('.lvl');if(!b)return;S.level=+b.dataset.l;save();renderHome();});
+let resetArmed=0;
+$('#resetBtn').addEventListener('click',()=>{
+  const btn=$('#resetBtn');
+  if(Date.now()-resetArmed<4000){Object.assign(S,{xp:0,streak:0,best:0,charge:0,owned:{},stats:{}});save();renderHome();btn.textContent='Progress reset';resetArmed=0;setTimeout(()=>btn.textContent='Reset progress',2000);return;}
+  resetArmed=Date.now();btn.textContent='Tap again to reset everything';setTimeout(()=>{if(Date.now()-resetArmed>=3900)btn.textContent='Reset progress';},4000);
+});
+
+/* ---------- quest ---------- */
+function startRound(){
+  const topics=shuffle(S.topics);const plan=[];
+  for(let i=0;i<10;i++){const t=TOPIC[topics[i%topics.length]];plan.push([t.id,pick(t.gens)]);}
+  R={qs:shuffle(plan).map(([tid,g])=>{const wid=S.world==='mix'?pick(WORLD_IDS):S.world;const q=G[g](S.level,W[wid]);q.topic=tid;q.world=wid;return q;}),
+     i:0,res:[],pts:0,firstTry:0,correct:0,newItems:[]};
+  show('quest');renderQ();
+}
+const cur=()=>R.qs[R.i];
+function renderDots(){$('#dots').innerHTML=R.qs.map((_,i)=>`<span class="dot ${R.res[i]||(i===R.i?'cur':'')}"></span>`).join('');}
+function buildInput(q){
+  if(q.input==='choice')return `<div class="choices">${q.choices.map((c,i)=>`<button class="choice" data-i="${i}">${c}</button>`).join('')}</div>`;
+  if(q.input==='number')return `<div class="nin"><input class="inp wide" id="in-x" inputmode="decimal" autocomplete="off" aria-label="Your answer">${q.unit?`<span>${q.unit}</span>`:''}</div>`;
+  return `<div><div class="fin">${q.whole?`<input class="inp whole" id="in-w" inputmode="numeric" autocomplete="off" aria-label="Whole number">`:''}
+    <div class="stack"><input class="inp" id="in-n" inputmode="numeric" autocomplete="off" aria-label="Numerator (top)"><span class="line"></span><input class="inp" id="in-d" inputmode="numeric" autocomplete="off" aria-label="Denominator (bottom)"></div></div>
+    ${q.whole?`<p class="fin-hint">Left box: whole number (leave it empty if there isn’t one)</p>`:''}</div>`;
+}
+function renderQ(){
+  const q=cur();R.att=0;R.done=false;R.hinted=false;
+  document.body.dataset.world=q.world;
+  $('#tag').innerHTML=`<span aria-hidden="true">${W[q.world].emoji}</span> ${W[q.world].name} · ${TOPIC[q.topic].name}`;
+  $('#qtext').innerHTML=q.text;
+  const disp=q.display||(S.level===1&&q.calc?`<span class="calc-label">Work out</span>${q.calc} = ?`:'');
+  $('#display').innerHTML=disp;$('#display').hidden=!disp;
+  $('#answer').innerHTML=buildInput(q);
+  $('#hint').hidden=true;$('#feedback').hidden=true;
+  $('#hintBtn').hidden=false;
+  const mb=$('#mainBtn');mb.textContent='Check';mb.hidden=q.input==='choice';
+  renderDots();
+  const first=$('#answer input');if(first)setTimeout(()=>first.focus({preventScroll:true}),30);
+  speakQ();
+}
+function showHint(){
+  const q=cur();if(R.hinted)return;R.hinted=true;
+  const calcShown=q.display||S.level===1;
+  $('#hint').innerHTML=`<p>💡 ${q.hint}</p>${q.calc&&!calcShown?`<p class="calc">${q.calc}</p>`:''}${q.viz||''}`;
+  $('#hint').hidden=false;$('#hintBtn').hidden=true;
+}
+function say(kind,html){const fb=$('#feedback');fb.className='feedback '+kind;fb.innerHTML=html;fb.hidden=false;}
+function readFrac(){
+  const g=id=>{const el=document.getElementById(id);return el?el.value.trim():'';};
+  const ws=g('in-w'),ns=g('in-n'),ds=g('in-d');
+  if(!ws&&!ns&&!ds)return {err:'Fill in your answer first.'};
+  const ok=s=>!s||/^\d+$/.test(s);
+  if(!ok(ws)||!ok(ns)||!ok(ds))return {err:'Use whole numbers in each box.'};
+  if(ns&&!ds)return {err:'Fill in the bottom number (the denominator) too.'};
+  if(ds&&!ns)return {err:'Fill in the top number (the numerator) too.'};
+  const d=ds?+ds:1,n=ns?+ns:0,w=ws?+ws:0;
+  if(d===0)return {err:'The denominator can’t be 0.'};
+  return {w,n,d};
+}
+function grade(q,resp){
+  if(q.input==='choice')return {correct:resp===q.answer};
+  if(q.input==='number')return {correct:Math.abs(resp-q.answer)<1e-6};
+  const {w,n,d}=resp;const tn=w*d+n;const A=q.answer;
+  if(tn*A.d!==A.n*d)return {correct:false};
+  if(q.form==='mixed'&&!(w>0&&n>0&&n<d))return {correct:false,note:'That’s the right amount, but it needs to be a mixed number (a whole number and a fraction).'};
+  if(q.form==='improper'&&w>0)return {correct:false,note:'That’s the right amount, but write it as one improper fraction with no whole number.'};
+  const simplest=(n===0||gcd(n,d)===1)&&(w===0||n<d);
+  if(q.simplest&&!simplest)return {correct:false,note:'That’s equal, but it can be simplified more.'};
+  if(!simplest)return {correct:true,tip:`Tip: the simplest way to write it is ${nice(tn,d)}.`};
+  return {correct:true};
+}
+function ansHTML(q){
+  if(q.input==='choice')return q.choices[q.answer];
+  if(q.input==='number')return `${fmtNum(q.answer)}${q.unit||''}`;
+  return q.form==='improper'?F(q.answer.n,q.answer.d):nice(q.answer.n,q.answer.d);
+}
+function record(q,ok){const s=S.stats[q.topic]||(S.stats[q.topic]={r:0,t:0});s.t++;if(ok)s.r++;}
+function lockInputs(){document.querySelectorAll('#answer input,#answer .choice').forEach(el=>el.disabled=true);}
+function finish(kind,html){
+  const q=cur();R.done=true;say(kind,html);lockInputs();
+  if(q.input==='choice')document.querySelector(`.choice[data-i="${q.answer}"]`).classList.add('right');
+  $('#hintBtn').hidden=true;
+  const mb=$('#mainBtn');mb.hidden=false;mb.textContent=R.i===R.qs.length-1?'See results':'Next question';
+  renderDots();setTimeout(()=>mb.focus({preventScroll:true}),30);
+}
+function handle(r,choiceBtn){
+  const q=cur();
+  if(r.correct){
+    const pts=R.att===0?10:5;R.pts+=pts;R.correct++;if(R.att===0)R.firstTry++;
+    S.xp+=pts;S.streak++;S.best=Math.max(S.best,S.streak);S.charge++;
+    record(q,R.att===0);R.res[R.i]=R.att===0?'good':'ok';
+    finish('good',`<p class="fb-title">${pick(W[q.world].cheers)}<span class="pts">+${pts} ⭐</span></p>${r.tip?`<p>${r.tip}</p>`:''}<details><summary>How it works</summary><p>${q.explain}</p></details>`);
+    if(S.charge%5===0)award(q.world);
+  }else{
+    R.att++;
+    if(choiceBtn){choiceBtn.classList.add('wrong');choiceBtn.disabled=true;}
+    if(R.att<2){
+      say('try',`<p class="fb-title">${r.note||'Not quite.'} Have another go!</p>`);showHint();
+      const first=$('#answer input');if(first)first.focus({preventScroll:true});
+    }else{
+      S.streak=0;record(q,false);R.res[R.i]='bad';
+      finish('bad',`<p class="fb-title">The answer is ${ansHTML(q)}</p><p>${q.explain}</p>`);
+    }
+  }
+  save();updateHeader();
+}
+function check(){
+  const q=cur();
+  if(q.input==='number'){
+    const raw=$('#in-x').value.trim().replace(',','.').replace('%','').trim();
+    if(raw===''||isNaN(+raw))return say('info','<p>Type a number first.</p>');
+    return handle(grade(q,+raw));
+  }
+  const r=readFrac();if(r.err)return say('info',`<p>${r.err}</p>`);
+  handle(grade(q,r));
+}
+function next(){R.i++;if(R.i>=R.qs.length)endRound();else renderQ();}
+$('#mainBtn').addEventListener('click',()=>{if(!R)return;if(R.done)next();else check();});
+$('#hintBtn').addEventListener('click',showHint);
+$('#answer').addEventListener('click',e=>{const b=e.target.closest('.choice');if(!b||R.done||b.disabled)return;handle(grade(cur(),+b.dataset.i),b);});
+$('#answer').addEventListener('keydown',e=>{if(e.key==='Enter'&&!R.done){e.preventDefault();check();}});
+$('#readBtn').addEventListener('click',()=>speakQ(true));
+function fillVoices(){
+  const sel=$('#voiceSel');if(!sel)return;const vs=enVoices();
+  $('#voiceGroup').hidden=!canSpeak||!vs.length;
+  const cur=bestVoice();
+  $('#voiceNote').hidden=vs.some(v=>rankOf(v)<=4);
+  const ios=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  if(ios)$('#voiceNote').textContent='For a much more natural voice: Settings → Accessibility → Read & Speak (Spoken Content) → Voices → English → download an “Enhanced” or “Premium” voice (for example Serena or Jamie, UK). Then reopen this game.';
+  const good=v=>rankOf(v)<=4;
+  sel.innerHTML=sortedVoices().map(v=>`<option value="${v.name.replace(/"/g,'&quot;')}"${cur&&v.name===cur.name?' selected':''}>${good(v)?'★ ':''}${v.name.replace(/\s*\(.*\)$/,'')} · ${v.lang}</option>`).join('');
+}
+if(canSpeak){try{speechSynthesis.addEventListener('voiceschanged',fillVoices);}catch(e){}setTimeout(fillVoices,300);}
+$('#voiceSel').addEventListener('change',e=>{S.voice=e.target.value;save();speakParts([{t:'Hi Flora! This is my voice. Shall we do some fractions?',pitch:1.05}],true);});
+$('#voiceTry').addEventListener('click',()=>speakParts([{t:'Hi Flora! Ready for an adventure? Let’s smash some fractions!',pitch:1.05}],true));
+$('#sndBtn').addEventListener('click',()=>{S.sound=S.sound===false;if(!S.sound)stopSpeak();else if(R&&!$('#quest').hidden)speakQ();save();updateHeader();});
+$('#quitBtn').addEventListener('click',()=>{stopSpeak();R=null;renderHome();show('home');});
+
+function award(wid){
+  let w=W[wid];let free=w.collect.map((_,i)=>i).filter(i=>!S.owned[wid+':'+i]);
+  if(!free.length){const other=WORLD_IDS.find(id=>W[id].collect.some((_,i)=>!S.owned[id+':'+i]));if(!other)return;wid=other;w=W[wid];free=w.collect.map((_,i)=>i).filter(i=>!S.owned[wid+':'+i]);}
+  const i=pick(free);S.owned[wid+':'+i]=1;const [em,name]=w.collect[i];R.newItems.push([em,name]);save();
+  const t=$('#toast');
+  t.innerHTML=`<div class="toast-card"><b>${em}</b><strong>New for your bag!</strong><span>${name} · ${w.name}</span></div>`;
+  t.hidden=false;clearTimeout(award.tm);award.tm=setTimeout(()=>t.hidden=true,2600);
+}
+$('#toast').addEventListener('click',()=>$('#toast').hidden=true);
+
+function endRound(){
+  stopSpeak();
+  const stars=R.pts>=90?3:R.pts>=65?2:R.pts>=35?1:0;
+  $('#eStars').innerHTML=[0,1,2].map(i=>`<span class="${i<stars?'on':'off'}">★</span>`).join('');
+  $('#eScore').textContent=`${R.correct} out of 10 correct`;
+  const lines=['Keep practising, every quest makes you stronger!','Nice work! You’re getting the hang of it.','Great quest! Nearly perfect.','Perfect quest! You are a fraction champion!'];
+  $('#eLine').textContent=`${R.firstTry} right first time · +${R.pts} stars. ${lines[stars]}`;
+  $('#eItems').innerHTML=R.newItems.map(([e,n])=>`<div class="newitem"><b>${e}</b><span>${n}</span></div>`).join('');
+  show('end');
+}
+$('#againBtn').addEventListener('click',startRound);
+$('#homeBtn').addEventListener('click',()=>{R=null;renderHome();show('home');});
+$('#startBtn').addEventListener('click',startRound);
+
+/* ---------- fireflies ---------- */
+const sky=$('#sky');
+for(let i=0;i<16;i++){const f=document.createElement('i');f.style.left=ri(2,98)+'%';f.style.top=ri(4,96)+'%';f.style.animationDelay=(rnd()*7).toFixed(2)+'s';f.style.animationDuration=(6+rnd()*5).toFixed(2)+'s';sky.appendChild(f);}
+
+if(/github\.io$/.test(location.hostname))$('#hubLink').hidden=false;
+renderHome();
+window.__fq={G,W,grade,spokenText}; // for testing
+})();
+</script>
+
+</body>
+</html>

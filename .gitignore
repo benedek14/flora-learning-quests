@@ -1,5 +1,4 @@
 .DS_Store
 ios/build/
-ios/DerivedData/
-*.xcuserstate
+ios/*.xcodeproj/
 xcuserdata/

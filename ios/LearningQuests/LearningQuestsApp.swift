@@ -2,9 +2,9 @@ import SwiftUI
 import AVFoundation
 
 @main
-struct FractionQuestApp: App {
+struct LearningQuestsApp: App {
     @Environment(\.scenePhase) private var scenePhase
-    @StateObject private var game = GameController()
+    @StateObject private var quests = QuestController()
 
     init() {
         // Let the read-aloud voice play out loud even if the device is on silent.
@@ -14,14 +14,14 @@ struct FractionQuestApp: App {
 
     var body: some Scene {
         WindowGroup {
-            GameView(game: game)
+            QuestView(quests: quests)
                 .ignoresSafeArea()
                 .statusBarHidden(true)
                 .background(Color(red: 0.06, green: 0.11, blue: 0.10))
         }
         .onChange(of: scenePhase) { phase in
-            if phase == .active { game.refreshIfStale() }
-            if phase == .background { game.wentToBackground() }
+            if phase == .active { quests.refreshIfStale() }
+            if phase == .background { quests.wentToBackground() }
         }
     }
 }

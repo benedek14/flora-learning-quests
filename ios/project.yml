@@ -1,25 +1,25 @@
 # Generate the Xcode project with:  cd ios && xcodegen
-name: FractionQuest
+name: LearningQuests
 options:
   bundleIdPrefix: com.benedektoth
   deploymentTarget:
     iOS: "16.0"
 targets:
-  FractionQuest:
+  LearningQuests:
     type: application
     platform: iOS
     sources:
-      - FractionQuest
+      - LearningQuests
     settings:
       base:
-        PRODUCT_NAME: FractionQuest
-        PRODUCT_BUNDLE_IDENTIFIER: com.benedektoth.fractionquest
+        PRODUCT_NAME: LearningQuests
+        PRODUCT_BUNDLE_IDENTIFIER: com.benedektoth.learningquests
         MARKETING_VERSION: "1.0"
         CURRENT_PROJECT_VERSION: "1"
         TARGETED_DEVICE_FAMILY: "1,2"
         SWIFT_VERSION: "5.0"
         GENERATE_INFOPLIST_FILE: YES
-        INFOPLIST_KEY_CFBundleDisplayName: Fraction Quest
+        INFOPLIST_KEY_CFBundleDisplayName: "Flora's Learning Quests"
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UIStatusBarHidden: YES
         INFOPLIST_KEY_UIViewControllerBasedStatusBarAppearance: NO

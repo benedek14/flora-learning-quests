@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1d19">
+<title>Flora's Learning Quests</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@500;700;800;900&display=swap">
+<style>
+/* Layout: one centred column, a grid of quest "doors". Same night-forest look as the quests themselves. */
+:root{
+  --bg:#0f1d19;--bg2:#183229;--panel:#1a2f29;--panel2:#223d34;--line:#2f4c41;
+  --ink:#f4efe1;--muted:#a7b9ad;--accent:#ffb547;--accent-ink:#1b1206;
+  --f-display:'Lilita One','Arial Rounded MT Bold','Trebuchet MS',system-ui,sans-serif;
+  --f-body:'Nunito',ui-rounded,'Segoe UI',system-ui,sans-serif;
+  color-scheme:dark;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100vh;background-color:var(--bg);background-image:radial-gradient(1100px 520px at 50% -8%,var(--bg2),transparent 70%);
+  background-attachment:fixed;color:var(--ink);font-family:var(--f-body);font-size:17px;line-height:1.5}
+.sky{position:fixed;inset:0;pointer-events:none;overflow:hidden}
+.sky i{position:absolute;width:5px;height:5px;border-radius:50%;background:var(--accent);opacity:0;
+  box-shadow:0 0 10px 3px color-mix(in srgb,var(--accent) 60%,transparent);animation:glow 7s ease-in-out infinite}
+@keyframes glow{0%,100%{opacity:0;transform:translate(0,0)}40%{opacity:.75}60%{opacity:.55;transform:translate(14px,-18px)}}
+@media (prefers-reduced-motion:reduce){.sky i{animation:none;opacity:.35}}
+.wrap{position:relative;max-width:860px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:40px 64px;display:flex;flex-direction:column;gap:30px}
+h1{font-family:var(--f-display);font-weight:400;font-size:clamp(40px,8vw,68px);line-height:1;margin:0;text-wrap:balance}
+h1 em{font-style:normal;color:var(--accent)}
+.lead{color:var(--muted);margin:10px 0 0;font-size:18px;max-width:52ch}
+.stats{display:flex;gap:8px;flex-wrap:wrap}
+.pill{display:inline-flex;gap:6px;align-items:center;padding:6px 14px;border-radius:999px;background:var(--panel);border:1px solid var(--line);font-weight:800;font-variant-numeric:tabular-nums}
+.label{font-size:12px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+.quests{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+.quest{--qa:var(--accent);display:flex;flex-direction:column;gap:10px;padding:22px;border-radius:22px;background:var(--panel);
+  border:2px solid var(--line);color:inherit;text-decoration:none;transition:transform .15s,border-color .15s;min-width:0}
+a.quest:hover,a.quest:focus-visible{transform:translateY(-3px);border-color:var(--qa);outline:none}
+a.quest:active{transform:translateY(0)}
+.quest .art{font-size:54px;line-height:1}
+.quest h2{font-family:var(--f-display);font-weight:400;font-size:28px;margin:0;color:var(--qa)}
+.quest p{margin:0;color:var(--muted);font-size:15px}
+.quest .go{margin-top:auto;align-self:flex-start;font-family:var(--f-display);font-size:19px;padding:9px 20px;border-radius:12px;
+  background:var(--qa);color:var(--accent-ink);box-shadow:0 4px 0 color-mix(in srgb,var(--qa) 55%,#000)}
+.quest .mine{font-weight:800;font-size:14px;color:var(--ink)}
+.quest.soon{border-style:dashed;background:transparent;justify-content:center;align-items:flex-start}
+.quest.soon h2{color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="sky" id="sky" aria-hidden="true"></div>
+<div class="wrap">
+  <header>
+    <h1>Flora’s <em>Learning</em> Quests</h1>
+    <p class="lead">Choose a quest. Every right answer earns stars and new treasures for your bag.</p>
+  </header>
+  <div class="stats" id="stats"></div>
+  <section>
+    <p class="label">Your quests</p>
+    <div class="quests" id="quests"></div>
+  </section>
+</div>
+<script>
+// To add a new quest: put it in its own folder (e.g. times-tables/index.html) and add an entry here.
+const QUESTS=[
+  {path:'fractions/',name:'Fraction Quest',art:'🦊',accent:'#ffb547',desc:'Year 6 fractions with Hogwarts, Minecraft, Pokémon, dragons and forest friends.',
+   store:'flora-fraction-quest-v1',bagTotal:50}
+];
+const read=k=>{try{return JSON.parse(localStorage.getItem(k))||null}catch(e){return null}};
+let stars=0,bag=0,bagTotal=0;
+document.getElementById('quests').innerHTML=QUESTS.map(q=>{
+  const s=read(q.store)||{};const owned=Object.keys(s.owned||{}).length;
+  stars+=s.xp||0;bag+=owned;bagTotal+=q.bagTotal||0;
+  return `<a class="quest" href="${q.path}" style="--qa:${q.accent}"><span class="art" aria-hidden="true">${q.art}</span><h2>${q.name}</h2><p>${q.desc}</p>
+    ${s.xp?`<span class="mine">⭐ ${s.xp} stars · 🎒 ${owned}/${q.bagTotal}</span>`:''}<span class="go">Play</span></a>`;
+}).join('')+`<div class="quest soon"><span class="art" aria-hidden="true">🗝️</span><h2>More quests coming soon</h2><p>New adventures will appear here.</p></div>`;
+document.getElementById('stats').innerHTML=`<span class="pill">⭐ ${stars} stars</span><span class="pill">🎒 ${bag}/${bagTotal} treasures</span>`;
+const sky=document.getElementById('sky');
+for(let i=0;i<16;i++){const f=document.createElement('i');f.style.left=(2+Math.random()*96)+'%';f.style.top=(4+Math.random()*92)+'%';
+  f.style.animationDelay=(Math.random()*7).toFixed(2)+'s';f.style.animationDuration=(6+Math.random()*5).toFixed(2)+'s';sky.appendChild(f);}
+</script>
+</body>
+</html>
