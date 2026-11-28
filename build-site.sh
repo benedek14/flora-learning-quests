@@ -9,8 +9,15 @@
 set -e
 cd "$(dirname "$0")"
 rm -rf docs && mkdir -p docs
+[ -f fonts/fonts.css ] || python3 fetch-fonts.py
 python3 - <<'EOF'
-import glob, json, os
+import glob, json, os, re
+FONTS = '<style>\n' + open('fonts/fonts.css').read() + '</style>\n'
+
+def offline_fonts(html):
+    # swap the Google Fonts links for the embedded copy, so pages look right without internet
+    html = re.sub(r'<link rel="preconnect" href="https://fonts\.g[^"]*"[^>]*>\n?', '', html)
+    return re.sub(r'<link rel="stylesheet" href="https://fonts\.googleapis\.com[^"]*">\n?', lambda m: FONTS, html)
 
 HEAD = '''<!doctype html>
 <html lang="en">
@@ -46,6 +53,7 @@ os.makedirs(bundle, exist_ok=True)
 for old in glob.glob(bundle + '/*.html'):
     os.remove(old)
 for path, html in pages.items():
+    html = offline_fonts(html)
     os.makedirs('docs/' + path, exist_ok=True)
     open('docs/' + path + 'index.html', 'w', encoding='utf-8').write(html)
     name = path.strip('/') or 'home'
