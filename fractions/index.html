@@ -720,6 +720,7 @@ const STORE='flora-fraction-quest-v1';
 const ALL_TOPICS=TOPICS.map(t=>t.id);
 let saved=null;try{saved=JSON.parse(localStorage.getItem(STORE));}catch(e){}
 const S=Object.assign({xp:0,streak:0,best:0,charge:0,owned:{},stats:{},world:'mix',topics:ALL_TOPICS.slice(),level:1},saved||{});
+if(S.allTopics!==false)S.topics=ALL_TOPICS.slice();
 S.topics=S.topics.filter(t=>TOPIC[t]);if(!S.topics.length)S.topics=ALL_TOPICS.slice();
 if(!S.voiceV2){S.voice=null;S.voiceV2=1;}
 const save=()=>{try{localStorage.setItem(STORE,JSON.stringify(S));}catch(e){}};
@@ -754,6 +755,7 @@ $('#topics').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!
   else if(S.topics.length===TOPICS.length)S.topics=[t];
   else if(S.topics.includes(t)){S.topics=S.topics.filter(x=>x!==t);if(!S.topics.length)S.topics=ALL_TOPICS.slice();}
   else S.topics.push(t);
+  S.allTopics=S.topics.length===TOPICS.length;
   save();renderHome();});
 $('#levels').addEventListener('click',e=>{const b=e.target.closest('.lvl');if(!b)return;S.level=+b.dataset.l;save();renderHome();});
 let resetArmed=0;

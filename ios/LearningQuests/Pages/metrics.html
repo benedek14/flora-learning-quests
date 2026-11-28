@@ -270,6 +270,21 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid
 .ladder b{padding:4px 12px;border-radius:10px;background:var(--accent);color:var(--accent-ink)}
 .ladder i{font-style:normal;color:var(--muted);font-size:14px;font-weight:800}
 .hint .ladder-note{margin-top:6px;font-size:14px;color:var(--muted)}
+.ruler{width:100%;max-width:620px;color:var(--ink);display:block;margin:0 auto}
+.ruler line{stroke:currentColor;stroke-width:1.5}
+.ruler text{fill:currentColor;font:700 13px var(--f-body);text-anchor:middle}
+.ruler .body{fill:var(--panel2);stroke:var(--line)}
+.ruler .obj{fill:var(--accent)}
+.ruler .guide{stroke:var(--accent);stroke-dasharray:3 3}
+.barmodel{max-width:520px;margin:0 auto;font-size:20px;font-weight:800}
+.bm-whole{border:3px solid var(--ink);border-radius:10px 10px 0 0;padding:10px;text-align:center}
+.bm-parts{display:flex;border:3px solid var(--ink);border-top:0;border-radius:0 0 10px 10px}
+.bm-parts div{padding:10px 6px;text-align:center;min-width:90px}
+.bm-parts div+div{border-left:3px solid var(--ink)}
+.bm-parts div:first-child{color:var(--accent)}
+.shop{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;font-size:17px;font-weight:700}
+.shop .box{display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px 18px;border-radius:14px;background:var(--panel2);border:1px solid var(--line);min-width:110px}
+.shop .box b{font-family:var(--f-display);font-weight:400;font-size:20px;color:var(--accent);text-transform:capitalize}
 .hint .calc{margin-top:6px;font-size:22px}
 .bars{display:flex;flex-direction:column;gap:8px;margin-top:10px}
 .barrow{display:flex;align-items:center;gap:12px}
@@ -368,7 +383,7 @@ summary{cursor:pointer;font-weight:800;color:var(--muted)}
     </div>
 
     <div class="foot">
-      <span>Year 6 measures: converting length, mass and capacity, mixed units, measurement problems, and miles to kilometres.</span>
+      <span>Year 6 converting units (White Rose Spring Block 4): choosing units, reading scales, metric and imperial units, time, miles, and problems with money.</span>
       <button class="ghost" id="resetBtn">Reset progress</button>
     </div>
   </section>
@@ -487,12 +502,16 @@ const TOTAL_ITEMS=WORLD_IDS.reduce((a,id)=>a+W[id].collect.length,0);
 const MIX={id:'mix',name:'Mix them all',emoji:'🎲',accent:'#ffb547',desc:'A different world every question'};
 
 const TOPICS=[
+  {id:'units',name:'Choosing units & estimates',gens:['whichUnit','estimate']},
+  {id:'scales',name:'Reading a ruler',gens:['ruler']},
   {id:'length',name:'Length: mm, cm, m, km',gens:['convLength','convLength','cmpLength']},
   {id:'mass',name:'Mass: g, kg',gens:['convMass','convMass','cmpMass']},
   {id:'capacity',name:'Capacity: ml, l',gens:['convCapacity','convCapacity','cmpCapacity']},
-  {id:'mixed',name:'Mixed units',gens:['mixedUnits']},
-  {id:'problems',name:'Measurement problems',gens:['problem']},
-  {id:'miles',name:'Miles & kilometres',gens:['miles']}
+  {id:'mixed',name:'Mixed units & bar models',gens:['mixedUnits','splitUnits','barModel']},
+  {id:'time',name:'Time',gens:['convTime','convTime','cmpTime']},
+  {id:'imperial',name:'Imperial units',gens:['imperial']},
+  {id:'miles',name:'Miles & kilometres',gens:['miles']},
+  {id:'problems',name:'Measurement & money problems',gens:['problem','shopping','shopping']}
 ];
 const TOPIC=Object.fromEntries(TOPICS.map(t=>[t.id,t]));
 const LEVELS=[
@@ -589,6 +608,13 @@ function cmpGen(cat){return (L,w)=>{
     if(nv<=0||Math.abs(nv-a.smallV)<1e-9)nv=a.smallV+step;}
   let m1=`${fm(a.bigV)} ${big}`,m2=`${fm(nv)} ${small}`,v1=a.A,v2=Math.round(nv*U[small].s*1000)/1000;
   if(rnd()<.5){[m1,m2]=[m2,m1];[v1,v2]=[v2,v1];}
+  if(rnd()<.4){
+    const sym=v1<v2?0:v1>v2?1:2;const S3=['&lt;','&gt;','='];
+    return {text:`Is the first measurement smaller than, bigger than or the same as the second? Choose &lt;, &gt; or =.`,
+      display:`${m1} <span class="eq">?</span> ${m2}`,input:'choice',choices:S3,answer:sym,
+      hint:`Change both into the same unit first. Try ${uw(small)}.`,viz:ladder(cat),
+      explain:`In ${uw(small)}: ${m1} = ${fm(v1/U[small].s)} ${small} and ${m2} = ${fm(v2/U[small].s)} ${small}. So ${m1} <b>${S3[sym]}</b> ${m2}.`};
+  }
   const ans=v1>v2?0:v1<v2?1:2;const same='They are the same';const choices=[m1,m2,same];
   return {text:pick([`${c1} says ${m1} is ${MORE[cat]} than ${m2}. ${c2} is not so sure. Which is ${MORE[cat]}?`,`Which is ${MORE[cat]}: ${m1} or ${m2}?`]),
     input:'choice',choices,answer:ans,
@@ -651,7 +677,7 @@ G.problem=(L,w)=>{
 G.miles=(L,w)=>{
   const {c1}=ctx(w);
   const toKm=L===1||rnd()<.5;
-  const k=L===3?ri(1,12)/2:ri(1,L===1?6:10);
+  const k=L===1?ri(1,6):L===2?ri(2,20)/2:ri(1,30)/2;
   const mi=5*k,km=8*k;
   const text=toKm?pick([`${w.path} is about ${fm(mi)} miles long. About how many kilometres is that?`,`${c1} travelled ${fm(mi)} miles to ${w.place}. About how many kilometres is that?`])
                  :pick([`${c1} cycled ${fm(km)} km. About how many miles is that?`,`It is ${fm(km)} km to ${w.place}. About how many miles is that?`]);
@@ -659,6 +685,230 @@ G.miles=(L,w)=>{
     hint:`5 miles is about 8 km. How many lots of ${toKm?'5 miles':'8 km'} are there?`,
     viz:`<div class="ladder"><b>5 miles</b><i>≈</i><b>8 km</b></div>`,
     explain:`${toKm?`${fm(mi)} ÷ 5`:`${fm(km)} ÷ 8`} = ${fm(k)} lots. ${fm(k)} × ${toKm?8:5} = <b>${fm(toKm?km:mi)} ${toKm?'km':'miles'}</b>.`};
+};
+
+/* ---------- choosing units & estimates ---------- */
+const UNIT_ITEMS=[['the mass of a letter','g'],['the length of a football pitch','m'],['the length of a pencil','cm'],['the distance from London to Paris','km'],
+  ['the length of an ant','mm'],['the mass of an apple','g'],['the mass of a grown-up','kg'],['the capacity of a bath','l'],['the amount of medicine on a spoon','ml'],
+  ['the height of a door','m'],['the thickness of a coin','mm'],['the mass of a bag of potatoes','kg'],['the capacity of a bucket','l'],['the amount of juice in a glass','ml'],
+  ['the length of a marathon','km'],['the width of a book','cm'],['the mass of a feather','g'],['the mass of a horse','kg'],['the capacity of a swimming pool','l'],['the length of a classroom','m']];
+const UNIT_ITEMS_W={wizard:[['the length of a magic wand','cm'],['the capacity of a cauldron','l'],['the mass of a Chocolate Frog','g']],
+  minecraft:[['the mass of a real pumpkin','kg'],['the length of a real sword','cm'],['the distance walked on a long adventure','km']],
+  pokemon:[['the mass of a Poké Ball','g'],['the length of a Pokémon route','km'],['the amount of potion in a spray bottle','ml']],
+  forest:[['the length of a hedgehog','cm'],['the mass of a fox','kg'],['the distance a deer runs in an hour','km'],['the amount of water in a puddle','l']],
+  dragon:[['the wingspan of a dragon','m'],['the distance from Berk to Dragon’s Edge','km'],['the mass of a Viking helmet','kg']]};
+const REASON={mm:'very small lengths',cm:'small lengths, like things you can hold',m:'longer lengths, like rooms, doors and pitches',km:'long distances between places',
+  g:'light things',kg:'heavier things, like people and big bags',ml:'small amounts of liquid',l:'bigger amounts of liquid'};
+const CAT_OF={mm:'length',cm:'length',m:'length',km:'length',g:'mass',kg:'mass',ml:'capacity',l:'capacity'};
+
+G.whichUnit=(L,w)=>{
+  const [thing,best]=pick([...UNIT_ITEMS,...(UNIT_ITEMS_W[w.id]||[])]);
+  const all=Object.keys(U);
+  const same=shuffle(all.filter(u=>u!==best&&CAT_OF[u]===CAT_OF[best]));
+  const other=shuffle(all.filter(u=>CAT_OF[u]!==CAT_OF[best]));
+  const opts=shuffle([best,same[0],other[0],other[1]]);
+  return {text:`Which unit would you use to measure ${thing}?`,input:'choice',choices:opts,answer:opts.indexOf(best),
+    hint:`First decide: is it a length, a mass or a capacity? Then think: is it small or big?`,
+    explain:`It’s a ${CAT_OF[best]}. <b>${best}</b> (${U[best].many}) is used for ${REASON[best]}.`};
+};
+
+const ESTIMATES=[['a bottle of juice',250,'ml'],['a carton of milk',1,'l'],['an apple',150,'g'],['a bag of flour',1,'kg'],['a pencil',15,'cm'],
+  ['the height of a door',2,'m'],['a bath full of water',150,'l'],['a spoonful of medicine',5,'ml'],['a football pitch',100,'m'],['a grown-up',70,'kg'],
+  ['a paperclip',3,'cm'],['a bucket of water',10,'l'],['a car',4,'m'],['a chocolate bar',50,'g'],['a walk to school',2,'km'],['a can of lemonade',330,'ml'],
+  ['a dog',20,'kg'],['a ladybird',8,'mm'],['a bike ride to the next town',15,'km'],['a mug of hot chocolate',300,'ml']];
+const WRONG={ml:['l','g'],l:['ml','kg'],g:['kg','ml'],kg:['g','l'],cm:['m','km'],m:['km','cm'],mm:['cm','m'],km:['m','cm']};
+G.estimate=(L,w)=>{
+  const [thing,v,u]=pick(ESTIMATES);
+  const word=x=>v===1?U[x].one:U[x].many;
+  const opts=shuffle([u,...WRONG[u]]);
+  return {text:`Which is the most sensible estimate for ${thing}?`,input:'choice',choices:opts.map(x=>`${v} ${word(x)}`),answer:opts.indexOf(u),
+    hint:`Picture it in your hand or in the room. Is it a length, a mass or a capacity? Is ${v} of that unit too big or too small?`,
+    explain:`${thing.replace(/^./,c=>c.toUpperCase())} is about <b>${v} ${word(u)}</b>. ${v} ${word(WRONG[u][0])} would be ${U[WRONG[u][0]].s>U[u].s?'far too much':'far too little'}${CAT_OF[WRONG[u][1]]!==CAT_OF[u]?`, and ${U[WRONG[u][1]].many} measure ${CAT_OF[WRONG[u][1]]}, not ${CAT_OF[u]}`:''}.`};
+};
+
+/* ---------- reading scales ---------- */
+function rulerSVG(start,len,max){
+  const W=620,pad=22,sc=(W-2*pad)/max,top=48;
+  let t='';
+  for(let mm=0;mm<=max*10;mm++){const x=(pad+mm*sc/10).toFixed(1);const h=mm%10===0?24:mm%5===0?16:9;
+    t+=`<line x1="${x}" y1="${top}" x2="${x}" y2="${top+h}"/>`;if(mm%10===0)t+=`<text x="${x}" y="${top+42}">${mm/10}</text>`;}
+  const x0=pad+start*sc,x1=pad+(start+len)*sc;
+  return `<svg class="ruler" viewBox="0 0 ${W} 104" role="img" aria-label="A ruler from 0 to ${max} centimetres with an object above it">
+    <rect class="body" x="${pad-14}" y="${top}" width="${W-2*pad+28}" height="54" rx="6"/>${t}
+    <line class="guide" x1="${x0}" y1="30" x2="${x0}" y2="${top}"/><line class="guide" x1="${x1}" y1="30" x2="${x1}" y2="${top}"/>
+    <rect class="obj" x="${x0}" y="12" width="${x1-x0}" height="18" rx="9"/></svg>`;
+}
+G.ruler=(L,w)=>{
+  const {c1}=ctx(w);const max=15;
+  const start=L===3?ri(1,4):0;
+  const len=L===1?ri(3,14):ri(20,(max-start)*10-5)/10;
+  const end=start+len;
+  const inMm=L>1&&rnd()<.5;
+  const thing=TINY[w.id];
+  const ans=inMm?Math.round(len*10):len;
+  return {text:`${c1} put a ${thing} on a ruler. How long is it in ${inMm?'millimetres':'centimetres'}?`,
+    display:rulerSVG(start,len,max),input:'number',answer:ans,unit:inMm?' mm':' cm',
+    hint:(start?`Careful: it doesn’t start at 0! `:'')+`The numbers are centimetres. Each small mark is 1 millimetre, and 10 small marks make 1 cm.`,
+    explain:(start?`It starts at ${start} cm and ends at ${fm(end)} cm, so it is ${fm(end)} − ${start} = ${fm(len)} cm long.`:`It ends at ${fm(len)} cm.`)+
+      (inMm?` ${fm(len)} cm × 10 = <b>${ans} mm</b>.`:` The answer is <b>${fm(len)} cm</b>.`)};
+};
+
+/* ---------- time ---------- */
+const TIME_PAIRS=[['seconds','minutes',60],['minutes','hours',60],['hours','days',24],['days','weeks',7],['months','years',12]];
+const tw=(n,u)=>n===1?u.slice(0,-1):u;
+const tv=(n,u)=>`${fm(n)} ${tw(n,u)}`;
+G.convTime=(L,w)=>{
+  const {c1}=ctx(w);
+  const [small,big,f]=pick(L===1?TIME_PAIRS.slice(0,4):TIME_PAIRS);
+  const story=V=>pick([`${c1} spent ${V} at ${w.place}.`,`The journey to ${w.place} took ${V}.`,`${c1} practised for ${w.quiz} for ${V}.`]);
+  const kind=L===1?pick(['down','up']):L===2?pick(['down','up','split','half']):pick(['mixed','split','two','half']);
+  if(kind==='split'){            // 150 seconds = ? minutes ? seconds
+    const W=ri(1,L===2?5:12),p=ri(1,f-1),n=W*f+p;
+    return {text:`${story(tv(n,small))} Write this in ${big} and ${small}.`,display:`${tv(n,small)} = ? ${big} ? ${small}`,
+      input:'pair',answer:[W,p],units:[big,small],
+      hint:`1 ${tw(1,big)} = ${f} ${small}. How many lots of ${f} fit into ${n}? What is left over?`,
+      explain:`${n} ÷ ${f} = ${W} remainder ${p}, so ${tv(n,small)} = <b>${tv(W,big)} ${tv(p,small)}</b>.`};
+  }
+  if(kind==='mixed'){            // 3 hours 20 minutes = ? minutes
+    const W=ri(1,9),p=ri(1,f-1),ans=W*f+p;
+    return {text:`${story(`${tv(W,big)} ${tv(p,small)}`)} How many ${small} is that altogether?`,display:`${tv(W,big)} ${tv(p,small)} = ? ${small}`,
+      input:'number',answer:ans,unit:' '+small,
+      hint:`Change the ${big} into ${small} first (× ${f}), then add the ${p}.`,
+      explain:`${tv(W,big)} = ${W} × ${f} = ${W*f} ${small}. ${W*f} + ${p} = <b>${ans} ${small}</b>.`};
+  }
+  if(kind==='two'){              // 2 hours = ? seconds
+    const n=ri(1,4);const ans=n*3600;
+    return {text:`${story(tv(n,'hours'))} How many seconds is that?`,calc:`${tv(n,'hours')} in seconds`,input:'number',answer:ans,unit:' seconds',
+      hint:`Two steps: hours → minutes (× 60), then minutes → seconds (× 60).`,
+      explain:`${tv(n,'hours')} = ${n*60} minutes. ${n*60} × 60 = <b>${ans} seconds</b>.`};
+  }
+  if(kind==='half'&&f%2===0){    // 2.5 hours = ? minutes
+    const n=ri(1,9)+.5,ans=n*f;
+    return {text:`${story(tv(n,big))} How many ${small} is that?`,calc:`${tv(n,big)} in ${small}`,input:'number',answer:ans,unit:' '+small,
+      hint:`1 ${tw(1,big)} = ${f} ${small}, so half of one is ${f/2} ${small}.`,
+      explain:`${Math.floor(n)} × ${f} = ${Math.floor(n)*f}, plus half of ${f} (${f/2}) = <b>${ans} ${small}</b>.`};
+  }
+  const n=ri(2,L===1?10:15);const down=kind!=='up';
+  const fv=down?n:n*f,ans=down?n*f:n,fu=down?big:small,tu=down?small:big;
+  return {text:`${story(tv(fv,fu))} How many ${tu} is that?`,calc:`${tv(fv,fu)} in ${tu}`,input:'number',answer:ans,unit:' '+tu,
+    hint:`1 ${tw(1,big)} = ${f} ${small}. `+(down?`Changing to the smaller unit: multiply by ${f}.`:`Changing to the bigger unit: divide by ${f}.`),
+    explain:`1 ${tw(1,big)} = ${f} ${small}, so ${down?'multiply':'divide'} by ${f}: ${fm(fv)} ${down?'×':'÷'} ${f} = <b>${tv(ans,tu)}</b>.`};
+};
+G.cmpTime=(L,w)=>{
+  const [small,big,f]=pick(TIME_PAIRS.slice(0,L===1?2:5));
+  const n=ri(1,L===1?5:10);const A=n*f;
+  const B=rnd()<.35?A:A+pick([-1,1])*(L===1?pick([f/2,f/4,10]):ri(1,Math.max(2,f/3)));
+  let a=tv(n,big),b=tv(B,small),va=A,vb=B;
+  if(B<=0)return G.cmpTime(L,w);
+  if(rnd()<.5){[a,b]=[b,a];[va,vb]=[vb,va];}
+  const ans=va<vb?0:va>vb?1:2;
+  return {text:`Is the first time shorter than, longer than or the same as the second? Choose &lt;, &gt; or =.`,
+    display:`${a} <span class="eq">?</span> ${b}`,input:'choice',choices:['&lt;','&gt;','='],answer:ans,
+    hint:`Change both into ${small} first. 1 ${tw(1,big)} = ${f} ${small}.`,
+    explain:`In ${small}: ${a} = ${va} and ${b} = ${vb}. So ${a} <b>${['&lt;','&gt;','='][ans]}</b> ${b}.`};
+};
+
+/* ---------- imperial units ---------- */
+const IMP=[{small:'ounces',big:'pounds',f:16,cat:'mass'},{small:'pounds',big:'stone',f:14,cat:'mass'},{small:'inches',big:'feet',f:12,cat:'length'},{small:'pints',big:'gallons',f:8,cat:'capacity'}];
+const ONE={ounces:'ounce',pounds:'pound',stone:'stone',inches:'inch',feet:'foot',pints:'pint',gallons:'gallon'};
+const iv=(n,u)=>`${fm(n)} ${n===1?ONE[u]:u}`;
+function impStory(cat,V,c1,w,item){
+  return cat==='mass'?pick([`A crate of ${item} weighs ${V}.`,`${c1}’s sack of ${item} weighs ${V}.`])
+    :cat==='length'?pick([`${c1}’s rope is ${V} long.`,`The ${w.field} is ${V} wide.`])
+    :pick([`A barrel holds ${V} of ${w.liquid}.`,`${c1} made ${V} of ${w.liquid}.`]);
+}
+G.imperial=(L,w)=>{
+  const {c1,item}=ctx(w);
+  if(L>1&&rnd()<.3){            // 1 inch ≈ 2.5 cm
+    const toCm=rnd()<.5;const n=toCm?ri(1,12)*2:ri(1,12)*5;const ans=toCm?n*2.5:n/2.5;
+    return {text:toCm?`${c1}’s ${TINY[w.id]} is ${iv(n,'inches')} long. About how many centimetres is that?`:`${c1}’s ${TINY[w.id]} is ${n} cm long. About how many inches is that?`,
+      calc:toCm?`${iv(n,'inches')} in cm`:`${n} cm in inches`,input:'number',answer:ans,unit:toCm?' cm':' inches',
+      hint:`1 inch is about 2.5 cm.`,viz:`<div class="ladder"><b>1 inch</b><i>≈</i><b>2.5 cm</b></div>`,
+      explain:toCm?`${n} × 2.5 = <b>${fm(ans)} cm</b>.`:`${n} ÷ 2.5 = <b>${fm(ans)} inches</b>.`};
+  }
+  if(L===3&&rnd()<.5){          // two steps: stone → ounces
+    const n=ri(1,5);const lb=n*14,oz=lb*16;
+    return {text:`${impStory('mass',iv(n,'stone'),c1,w,item)} How many ounces is that?`,calc:`${iv(n,'stone')} in ounces`,input:'number',answer:oz,unit:' ounces',
+      hint:`Two steps: stone → pounds (× 14), then pounds → ounces (× 16).`,
+      viz:`<div class="ladder"><b>1 stone</b><i>=</i><b>14 pounds</b></div><div class="ladder"><b>1 pound</b><i>=</i><b>16 ounces</b></div>`,
+      explain:`${iv(n,'stone')} = ${n} × 14 = ${lb} pounds. ${lb} × 16 = <b>${oz} ounces</b>.`};
+  }
+  const P=pick(IMP);
+  const down=L===1||rnd()<.5;
+  const n=ri(L===1?1:2,L===1?5:12);
+  const fv=down?n:n*P.f,ans=down?n*P.f:n,fu=down?P.big:P.small,tu=down?P.small:P.big;
+  return {text:`${impStory(P.cat,iv(fv,fu),c1,w,item)} How many ${tu} is that?`,calc:`${iv(fv,fu)} in ${tu}`,input:'number',answer:ans,unit:' '+tu,
+    hint:`1 ${ONE[P.big]} = ${P.f} ${P.small}. `+(down?`Multiply by ${P.f}.`:`Divide by ${P.f}.`),
+    viz:`<div class="ladder"><b>1 ${ONE[P.big]}</b><i>=</i><b>${P.f} ${P.small}</b></div>`,
+    explain:`1 ${ONE[P.big]} = ${P.f} ${P.small}, so ${fm(fv)} ${down?'×':'÷'} ${P.f} = <b>${iv(ans,tu)}</b>.`};
+};
+
+/* ---------- split into two units, bar models ---------- */
+G.splitUnits=(L,w)=>{
+  const {c1,item}=ctx(w);
+  const [cat,small,big]=pick([['capacity','ml','l'],['length','cm','m'],['length','m','km'],['mass','g','kg']]);
+  const f=U[big].s/U[small].s;
+  const W=ri(1,9);
+  const p=L===1?ri(1,9)*f/10:L===2?ri(1,99)*f/100:(f===100?ri(1,99):ri(1,999));
+  const V=`${fm(W+p/f)} ${big}`;
+  const text=cat==='capacity'?`${c1} has ${V} of ${w.liquid}. Write this in litres and millilitres.`
+    :cat==='mass'?`${c1}’s bag of ${item} weighs ${V}. Write this in kilograms and grams.`
+    :big==='m'?`${c1}’s rope is ${V} long. Write this in metres and centimetres.`:`${w.path} is ${V} long. Write this in kilometres and metres.`;
+  return {text,display:`${V} = ? ${big} ? ${small}`,input:'pair',answer:[W,p],units:[big,small],
+    hint:`The whole number part is the ${uw(big)}. Change the decimal part into ${uw(small)}: 1 ${big} = ${f} ${small}.`,viz:ladder(cat),
+    explain:`${V} is ${W} whole ${uw(big)} and ${fm(p/f)} ${big}. ${fm(p/f)} × ${f} = ${p}, so ${V} = <b>${W} ${big} ${p} ${small}</b>.`};
+};
+G.barModel=(L,w)=>{
+  const {c1,item}=ctx(w);
+  const [cat,small,big]=pick([['capacity','ml','l'],['mass','g','kg'],['length','cm','m']]);
+  const f=U[big].s/U[small].s;
+  const T=(ri(1,3)*10+ri(1,9))*f/10;                 // e.g. 1.9 l = 1900 ml
+  let K=L===1?Math.floor(T/f)*f:ri(1,Math.floor(T/(f/20))-1)*(f/20);
+  if(K<=0||K>=T)K=f/2;
+  const M=T-K;
+  const known=L===3?`${fm(K/f)} ${big}`:`${K} ${small}`;
+  const whole=`${fm(T/f)} ${big}`;
+  const text=cat==='capacity'?`${c1} poured ${whole} of ${w.liquid} into two jugs. One jug has ${known}. How many millilitres are in the other jug?`
+    :cat==='mass'?`Two bags of ${item} weigh ${whole} altogether. One bag weighs ${known}. How many grams does the other bag weigh?`
+    :`${c1} cut a ${whole} rope into two pieces. One piece is ${known} long. How long is the other piece, in centimetres?`;
+  return {text,display:`<div class="barmodel"><div class="bm-whole">${whole}</div><div class="bm-parts"><div style="flex:${M}">? ${small}</div><div style="flex:${K}">${known}</div></div></div>`,
+    input:'number',answer:M,unit:' '+small,
+    hint:`Make the units the same first: change ${whole} into ${uw(small)}. Then take away the part you know.`,viz:ladder(cat),
+    explain:`${whole} = ${T} ${small}`+(L===3?` and ${known} = ${K} ${small}`:'')+`. Missing part: ${T} − ${K} = <b>${M} ${small}</b>.`};
+};
+
+/* ---------- money problems ---------- */
+const PROD={wizard:'Owl Treats',minecraft:'bone meal',pokemon:'Pokémon food',forest:'bird seed',dragon:'fish flakes'};
+const kgOrG=g=>g>=1000?`${fm(g/1000)} kg`:`${g} g`;
+const money=p=>`£${(p/100).toFixed(2)}`;
+G.shopping=(L,w)=>{
+  const {c1}=ctx(w);const prod=PROD[w.id];
+  const masses=pick(L===1?[[500,1000,2000],[250,500,1000]]:L===2?[[600,1000,2000],[400,800,1500]]:[[250,750,1500],[300,1200,2500],[450,900,1800]]);
+  let base=L===1?ri(1,3)*100:ri(1,3)*100+pick([99,49]);
+  const prices=masses.map((m,i)=>{const p=base+i*(L===1?ri(1,2)*100:ri(1,3)*100);return p;});
+  const names=['small','medium','large'];
+  let counts=L===1?[0,0,0].map(()=>0):[ri(0,3),ri(0,2),ri(0,3)];
+  if(L===1){const a=ri(0,2),b=pick([0,1,2].filter(x=>x!==a));counts[a]=ri(1,3);counts[b]=ri(1,2);}
+  if(counts.filter(Boolean).length<2){counts=[2,1,2];}
+  const parts=names.map((n,i)=>counts[i]?`${counts[i]} ${n} box${counts[i]>1?'es':''}`:null).filter(Boolean);
+  const basket=parts.length>1?parts.slice(0,-1).join(', ')+' and '+parts[parts.length-1]:parts[0];
+  const Tg=counts.reduce((s,c,i)=>s+c*masses[i],0);const C=counts.reduce((s,c,i)=>s+c*prices[i],0);
+  const shop=`<div class="shop">${names.map((n,i)=>`<div class="box"><b>${n}</b><span>${kgOrG(masses[i])}</span><span>${money(prices[i])}</span></div>`).join('')}</div>`;
+  const lines=names.map((n,i)=>counts[i]?{n,c:counts[i],m:masses[i],p:prices[i]}:null).filter(Boolean);
+  const kind=pick(['mass','cost','enough']);
+  const intro=`The shop at ${w.place} sells ${prod} in three sizes.`;
+  if(kind==='cost')return {text:`${intro} ${c1} buys ${basket}. How much does ${c1} spend?`,display:shop,input:'number',answer:C/100,prefix:'£',unit:'',
+    hint:`Multiply each price by how many boxes, then add them up.`,
+    explain:lines.map(l=>`${l.c} × ${money(l.p)} = ${money(l.c*l.p)}`).join('<br>')+`<br>Total: <b>${money(C)}</b>.`};
+  if(kind==='mass')return {text:`${intro} ${c1} buys ${basket}. How much ${prod} is that altogether, in kilograms?`,display:shop,input:'number',answer:Tg/1000,unit:' kg',
+    hint:`Work out the mass of each kind of box, add them, then change grams into kilograms (÷ 1000).`,viz:ladder('mass'),
+    explain:lines.map(l=>`${l.c} × ${kgOrG(l.m)} = ${kgOrG(l.c*l.m)}`).join('<br>')+`<br>Total: ${Tg} g = <b>${fm(Tg/1000)} kg</b>.`};
+  const need=rnd()<.35?Tg:Tg+pick([-1,1])*pick([100,200,300,500]);
+  const ok=Tg>=need;
+  return {text:`${intro} ${c1} needs ${fm(need/1000)} kg of ${prod} and buys ${basket}. Does ${c1} have enough?`,display:shop,input:'choice',
+    choices:['Yes, enough','No, not enough'],answer:ok?0:1,
+    hint:`Add up the mass of all the boxes. Change everything into grams so you can compare: ${fm(need/1000)} kg = ${need} g.`,viz:ladder('mass'),
+    explain:lines.map(l=>`${l.c} × ${kgOrG(l.m)} = ${kgOrG(l.c*l.m)}`).join('<br>')+`<br>Total: ${kgOrG(Tg)}. ${c1} needs ${fm(need/1000)} kg, so <b>${ok?(Tg===need?'yes, exactly enough':'yes, there is enough'):'no, not enough'}</b>.`};
 };
 
 /* ---------- read aloud ---------- */
@@ -733,6 +983,7 @@ const STORE='flora-metric-quest-v1';
 const ALL_TOPICS=TOPICS.map(t=>t.id);
 let saved=null;try{saved=JSON.parse(localStorage.getItem(STORE));}catch(e){}
 const S=Object.assign({xp:0,streak:0,best:0,charge:0,owned:{},stats:{},world:'mix',topics:ALL_TOPICS.slice(),level:1},saved||{});
+if(S.allTopics!==false)S.topics=ALL_TOPICS.slice();
 S.topics=S.topics.filter(t=>TOPIC[t]);if(!S.topics.length)S.topics=ALL_TOPICS.slice();
 if(!S.voiceV2){S.voice=null;S.voiceV2=1;}
 const save=()=>{try{localStorage.setItem(STORE,JSON.stringify(S));}catch(e){}};
@@ -767,6 +1018,7 @@ $('#topics').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!
   else if(S.topics.length===TOPICS.length)S.topics=[t];
   else if(S.topics.includes(t)){S.topics=S.topics.filter(x=>x!==t);if(!S.topics.length)S.topics=ALL_TOPICS.slice();}
   else S.topics.push(t);
+  S.allTopics=S.topics.length===TOPICS.length;
   save();renderHome();});
 $('#levels').addEventListener('click',e=>{const b=e.target.closest('.lvl');if(!b)return;S.level=+b.dataset.l;save();renderHome();});
 let resetArmed=0;
@@ -788,7 +1040,8 @@ const cur=()=>R.qs[R.i];
 function renderDots(){$('#dots').innerHTML=R.qs.map((_,i)=>`<span class="dot ${R.res[i]||(i===R.i?'cur':'')}"></span>`).join('');}
 function buildInput(q){
   if(q.input==='choice')return `<div class="choices">${q.choices.map((c,i)=>`<button class="choice" data-i="${i}">${c}</button>`).join('')}</div>`;
-  if(q.input==='number')return `<div class="nin"><input class="inp wide" id="in-x" inputmode="decimal" autocomplete="off" aria-label="Your answer">${q.unit?`<span>${q.unit}</span>`:''}</div>`;
+  if(q.input==='number')return `<div class="nin">${q.prefix?`<span>${q.prefix}</span>`:''}<input class="inp wide" id="in-x" inputmode="decimal" autocomplete="off" aria-label="Your answer">${q.unit?`<span>${q.unit}</span>`:''}</div>`;
+  if(q.input==='pair')return `<div class="nin"><input class="inp" id="in-a" inputmode="decimal" autocomplete="off" aria-label="${q.units[0]}"><span>${q.units[0]}</span><input class="inp" id="in-b" inputmode="decimal" autocomplete="off" aria-label="${q.units[1]}"><span>${q.units[1]}</span></div>`;
   return `<div><div class="fin">${q.whole?`<input class="inp whole" id="in-w" inputmode="numeric" autocomplete="off" aria-label="Whole number">`:''}
     <div class="stack"><input class="inp" id="in-n" inputmode="numeric" autocomplete="off" aria-label="Numerator (top)"><span class="line"></span><input class="inp" id="in-d" inputmode="numeric" autocomplete="off" aria-label="Denominator (bottom)"></div></div>
     ${q.whole?`<p class="fin-hint">Left box: whole number (leave it empty if there isn’t one)</p>`:''}</div>`;
@@ -830,6 +1083,7 @@ function readFrac(){
 function grade(q,resp){
   if(q.input==='choice')return {correct:resp===q.answer};
   if(q.input==='number')return {correct:Math.abs(resp-q.answer)<1e-6};
+  if(q.input==='pair')return {correct:Math.abs(resp[0]-q.answer[0])<1e-6&&Math.abs(resp[1]-q.answer[1])<1e-6};
   const {w,n,d}=resp;const tn=w*d+n;const A=q.answer;
   if(tn*A.d!==A.n*d)return {correct:false};
   if(q.form==='mixed'&&!(w>0&&n>0&&n<d))return {correct:false,note:'That’s the right amount, but it needs to be a mixed number (a whole number and a fraction).'};
@@ -841,7 +1095,8 @@ function grade(q,resp){
 }
 function ansHTML(q){
   if(q.input==='choice')return q.choices[q.answer];
-  if(q.input==='number')return `${fmtNum(q.answer)}${q.unit||''}`;
+  if(q.input==='number')return q.prefix==='£'?`£${q.answer.toFixed(2)}`:`${q.prefix||''}${fmtNum(q.answer)}${q.unit||''}`;
+  if(q.input==='pair')return `${fmtNum(q.answer[0])} ${q.units[0]} ${fmtNum(q.answer[1])} ${q.units[1]}`;
   return q.form==='improper'?F(q.answer.n,q.answer.d):nice(q.answer.n,q.answer.d);
 }
 function record(q,ok){const s=S.stats[q.topic]||(S.stats[q.topic]={r:0,t:0});s.t++;if(ok)s.r++;}
@@ -874,13 +1129,24 @@ function handle(r,choiceBtn){
   }
   save();updateHeader();
 }
+// accepts 3500, 3,500 (thousands) and 3,5 (decimal comma); returns NaN when empty or not a number
+function parseNum(v){
+  let raw=String(v).trim().replace(/\s/g,'').replace('%','').replace(/^£/,'');
+  if(raw==='')return NaN;
+  raw=/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(raw)?raw.replace(/,/g,''):raw.replace(',','.');
+  return +raw;
+}
 function check(){
   const q=cur();
   if(q.input==='number'){
-    let raw=$('#in-x').value.trim().replace(/\s/g,'').replace('%','');
-    raw=/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(raw)?raw.replace(/,/g,''):raw.replace(',','.');
-    if(raw===''||isNaN(+raw))return say('info','<p>Type a number first.</p>');
-    return handle(grade(q,+raw));
+    const x=parseNum($('#in-x').value);
+    if(isNaN(x))return say('info','<p>Type a number first.</p>');
+    return handle(grade(q,x));
+  }
+  if(q.input==='pair'){
+    const a=parseNum($('#in-a').value),b=parseNum($('#in-b').value);
+    if(isNaN(a)||isNaN(b))return say('info',`<p>Fill in both boxes: ${q.units[0]} and ${q.units[1]}.</p>`);
+    return handle(grade(q,[a,b]));
   }
   const r=readFrac();if(r.err)return say('info',`<p>${r.err}</p>`);
   handle(grade(q,r));
